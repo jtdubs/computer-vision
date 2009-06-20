@@ -13,6 +13,10 @@
 
 static CvMemStorage* storage = 0;
 static CvHaarClassifierCascade* cascade = 0;
+static IplImage* gray = 0;
+static IplImage* small_img = 0;
+
+static double scale = 1.3;
 
 void detect_and_draw( IplImage* image );
 
@@ -36,22 +40,22 @@ int main( int argc, char** argv ) {
         if (!frame)
             break;
 
-        if (!frame_copy)
-            frame_copy = cvCreateImage(cvSize(frame->width, frame->height), IPL_DEPTH_8U, frame->nChannels);
+        if (!gray)
+            gray = cvCreateImage(cvSize(frame->width, frame->height), 8, 1);
 
-        if (frame->origin == IPL_ORIGIN_TL)
-            cvCopy(frame, frame_copy, 0);
-        else
-            cvFlip(frame, frame_copy, 0);
+        if (!small_img)
+            small_img = cvCreateImage(cvSize(cvRound(frame->width/scale), cvRound(frame->height/scale)), 8, 1);
 
-        detect_and_draw( frame_copy );
+        detect_and_draw(frame);
 
         if(cvWaitKey(10) >= 0)
             break;
     }
 
-    cvReleaseImage( &frame_copy );
-    cvReleaseCapture( &capture );
+    cvReleaseImage(&gray);
+    cvReleaseImage(&small_img);
+    cvReleaseImage(&frame);
+    cvReleaseCapture(&capture);
     cvDestroyWindow("result");
 
     return 0;
@@ -67,10 +71,6 @@ void detect_and_draw(IplImage* img) {
                                  {{255,0,0}},
                                  {{255,0,255}} };
 
-    double scale = 1.3;
-
-    IplImage* gray      = cvCreateImage(cvSize(img->width,img->height), 8, 1);
-    IplImage* small_img = cvCreateImage(cvSize(cvRound(img->width/scale), cvRound(img->height/scale)), 8, 1);
     int i;
 
     cvCvtColor(img, gray, CV_BGR2GRAY);
@@ -94,6 +94,4 @@ void detect_and_draw(IplImage* img) {
     }
 
     cvShowImage("result", img);
-    cvReleaseImage(&gray);
-    cvReleaseImage(&small_img);
 }
