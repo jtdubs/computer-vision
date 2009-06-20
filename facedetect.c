@@ -13,23 +13,20 @@
 
 const char* cascade_name = "/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml";
 
-static CvMemStorage* storage = 0;
-static CvHaarClassifierCascade* cascade = 0;
 static IplImage* gray = 0;
 static IplImage* small_img = 0;
 
 static double scale = 1.3;
 
-static CvScalar colors[] = { {{0,0,255}}, {{0,128,255}}, {{0,255,255}}, {{0,255,0}},
-                             {{255,128,0}}, {{255,255,0}}, {{255,0,0}}, {{255,0,255}} };
+static CvScalar colors[] = { {{  0,  0,255}}, {{  0,128,255}}, {{  0,255,255}}, {{  0,255,  0}},
+                             {{255,128,  0}}, {{255,255,  0}}, {{255,  0,  0}}, {{255,  0,255}} };
 
 int main(int argc, char** argv) {
-    CvCapture* capture = 0;
-    IplImage *frame;
+    IplImage* frame;
 
-    cascade = (CvHaarClassifierCascade*) cvLoad(cascade_name, 0, 0, 0);
-    storage = cvCreateMemStorage(0);
-    capture = cvCaptureFromCAM(0);
+    CvHaarClassifierCascade* cascade = (CvHaarClassifierCascade*) cvLoad(cascade_name, 0, 0, 0);
+    CvMemStorage* storage = cvCreateMemStorage(0);
+    CvCapture* capture = cvCaptureFromCAM(0);
 
     cvNamedWindow("result", 1);
 
@@ -60,10 +57,10 @@ int main(int argc, char** argv) {
             center.x = cvRound((r->x + r->width*0.5)*scale);
             center.y = cvRound((r->y + r->height*0.5)*scale);
             radius = cvRound((r->width + r->height)*0.25*scale);
-            cvCircle(gray, center, radius, colors[i%8], 3, 8, 0);
+            cvCircle(frame, center, radius, colors[i%8], 3, 8, 0);
         }
 
-        cvShowImage("result", gray);
+        cvShowImage("result", frame);
 
         if(cvWaitKey(10) >= 0)
             break;
