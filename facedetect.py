@@ -10,7 +10,7 @@ def main():
     capture = cvCreateCameraCapture(0)
     frame   = cvQueryFrame(capture)
     size    = cvGetSize(frame)
-    roi     = cvCloneImage(frame)
+    # roi     = cvCloneImage(frame)
     gray    = cvCreateImage(size, 8, 1)
     small   = cvCreateImage(CvSize(int(size.width/scale), int(size.height/scale)), 8, 1)
     eigs    = cvCreateImage(CvSize(int(size.width/scale), int(size.height/scale)), 32, 1)
@@ -19,12 +19,12 @@ def main():
     cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 480)
 
     cvNamedWindow('frame', 1)
-    cvNamedWindow('roi',   1)
+    # cvNamedWindow('roi',   1)
 
     state = 'find_face'
     while True:
         if state == 'find_face':
-            cvCopy(frame, roi, None)
+            # cvCopy(frame, roi)
             cvCvtColor(frame, gray, CV_BGR2GRAY)
             cvResize(gray, small, CV_INTER_LINEAR)
             cvEqualizeHist(small, small)
@@ -36,11 +36,11 @@ def main():
             r = faces[0]
             tl = CvPoint(int(r.x*scale), int(r.y*scale))
             br = CvPoint(int((r.x+r.width)*scale), int((r.y+r.height)*scale))
-            cvSetImageROI(roi, CvRect(tl.x, tl.y, br.x-tl.x, br.y-tl.y))
+            # cvSetImageROI(roi, CvRect(tl.x, tl.y, br.x-tl.x, br.y-tl.y))
             cvRectangle(frame, tl, br, CV_RGB(255, 0, 0), 3, 8, 0)
 
         cvShowImage('frame', frame)
-        cvShowImage('roi',   roi)
+        # cvShowImage('roi',   roi)
 
         if cvWaitKey(10) == 0x1B:
             break
