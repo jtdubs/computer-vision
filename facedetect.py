@@ -36,8 +36,8 @@ def main():
                 br = cvPoint(int((r.x+r.width)*scale), int((r.y+r.height)*scale))
                 cvRectangle(frame, tl, br, CV_RGB(255, 0, 0), 3, 8, 0)
 
-                for (x, y) in cvGoodFeaturesToTrack(small, eigs, temp, None, 20, 1.0, 1.0, use_harris=True):
-                    print (x, y)
+                for p in cvGoodFeaturesToTrack(small, eigs, temp, None, 100, 0.02, 4.0, use_harris=False):
+                    cvCircle(frame, cvPoint(int(p.x*scale), int(p.y*scale)), 3, CV_RGB(0, 0, 255), 1)
 
         cvShowImage('small', small)
         cvShowImage('frame', frame)
