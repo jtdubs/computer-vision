@@ -36,8 +36,14 @@ def main():
                 br = cvPoint(int((r.x+r.width)*scale), int((r.y+r.height)*scale))
                 cvRectangle(frame, tl, br, CV_RGB(255, 0, 0), 3, 8, 0)
 
+                cvSetImageROI(small, r)
+                cvSetImageROI(eigs,  r)
+                cvSetImageROI(temp,  r)
                 for p in cvGoodFeaturesToTrack(small, eigs, temp, None, 100, 0.02, 4.0, use_harris=False):
-                    cvCircle(frame, cvPoint(int(p.x*scale), int(p.y*scale)), 3, CV_RGB(0, 0, 255), 1)
+                    cvCircle(frame, cvPoint(int((r.x+p.x)*scale), int((r.y+p.y)*scale)), 2, CV_RGB(0, 0, 255), 1)
+                cvResetImageROI(small)
+                cvResetImageROI(eigs)
+                cvResetImageROI(temp)
 
         cvShowImage('small', small)
         cvShowImage('frame', frame)
