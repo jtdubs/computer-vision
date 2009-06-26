@@ -21,12 +21,14 @@ class FaceTracking:
 
     def init_glut(self):
         glutInit(sys.argv)
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
+        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
         glutInitWindowSize(640,480)
         glutCreateWindow('Face Recognition')
 
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glShadeModel(GL_SMOOTH)
+        glEnable(GL_DEPTH_TEST)
+        glutReshapeFunc(self.on_reshape)
         glutDisplayFunc(self.on_display)
 
     def init_cv(self):
@@ -49,25 +51,65 @@ class FaceTracking:
 
     def cleanup_cv(self):
         cvDestroyWindow('result')
-        # cvReleaseCapture(self.capture)
-        cvReleaseImage(self.gray)
-        cvReleaseImage(self.small)
 
     def rect_to_params(self, rect):
         size     = (rect.width+rect.height)/2
         x        = rect.x + (rect.width/2)
         y        = rect.y + (rect.height/2)
         distance = (110 - math.sqrt(13600 - 40*(340-size))) / 20
-        return (x, y, rect.height, distance)
+        return (x-320, y-240, rect.height, distance)
+
+    def on_reshape(self, w, h):
+        print "viewport:", w, h
+
+        glViewport(0, 0, w, h)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(45.0, w/float(h), 0.1, 100.0)
+
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
 
     def on_display(self):
         x, y, d, c = 0, 0, 0, 0
         for (x1, y1, h1, d1) in [h for h in self.history if h]:
             x, y, d, c = x+x1, y+y1, d+d1, c+1
-        x, y, d = x / c, y / c, d / c
+        if c > 0:
+            x, y, d = x / c, y / c, d / c
 
         print x, y, d
-        glClear(GL_COLOR_BUFFER_BIT)
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        glLoadIdentity()
+        glTranslatef(-1.5, 0.0, -6.0)
+        glBegin(GL_TRIANGLES)
+        glColor3f(1.0, 0.0, 0.0); glVertex3f( 0.0,  1.0,  0.0)
+        glColor3f(0.0, 1.0, 0.0); glVertex3f(-1.0, -1.0,  1.0)
+        glColor3f(0.0, 0.0, 1.0); glVertex3f( 1.0, -1.0,  1.0)
+        glColor3f(1.0, 0.0, 0.0); glVertex3f( 0.0,  1.0,  0.0)
+        glColor3f(0.0, 0.0, 1.0); glVertex3f( 1.0, -1.0,  1.0)
+        glColor3f(0.0, 1.0, 0.0); glVertex3f( 1.0, -1.0, -1.0)
+        glColor3f(1.0, 0.0, 0.0); glVertex3f( 0.0,  1.0,  0.0)
+        glColor3f(0.0, 1.0, 0.0); glVertex3f( 1.0, -1.0, -1.0)
+        glColor3f(0.0, 0.0, 1.0); glVertex3f(-1.0, -1.0, -1.0)
+        glColor3f(1.0, 0.0, 0.0); glVertex3f( 0.0,  1.0,  0.0)
+        glColor3f(0.0, 0.0, 1.0); glVertex3f(-1.0, -1.0, -1.0)
+        glColor3f(0.0, 1.0, 0.0); glVertex3f(-1.0, -1.0,  1.0)
+        glEnd()
+
+        glLoadIdentity()
+        glTranslatef(1.5, 0.0, -7.0)
+        glBegin(GL_QUADS)
+        glColor3f(0.0, 1.0, 0.0); glVertex3f( 1.0,  1.0, -1.0); glVertex3f(-1.0,  1.0, -1.0); glVertex3f(-1.0,  1.0,  1.0); glVertex3f( 1.0,  1.0,  1.0)
+        glColor3f(1.0, 0.5, 0.0); glVertex3f( 1.0, -1.0,  1.0); glVertex3f(-1.0, -1.0,  1.0); glVertex3f(-1.0, -1.0, -1.0); glVertex3f( 1.0, -1.0, -1.0)
+        glColor3f(1.0, 0.0, 0.0); glVertex3f( 1.0,  1.0,  1.0); glVertex3f(-1.0,  1.0,  1.0); glVertex3f(-1.0, -1.0,  1.0); glVertex3f( 1.0, -1.0,  1.0)
+        glColor3f(1.0, 1.0, 0.0); glVertex3f( 1.0, -1.0, -1.0); glVertex3f(-1.0, -1.0, -1.0); glVertex3f(-1.0,  1.0, -1.0); glVertex3f( 1.0,  1.0, -1.0)
+        glColor3f(0.0, 0.0, 1.0); glVertex3f(-1.0,  1.0,  1.0); glVertex3f(-1.0,  1.0, -1.0); glVertex3f(-1.0, -1.0, -1.0); glVertex3f(-1.0, -1.0,  1.0)
+        glColor3f(1.0, 0.0, 1.0); glVertex3f( 1.0,  1.0, -1.0); glVertex3f( 1.0,  1.0,  1.0); glVertex3f( 1.0, -1.0,  1.0); glVertex3f( 1.0, -1.0, -1.0)
+        glEnd()
+
         glutSwapBuffers()
 
     def main(self):
