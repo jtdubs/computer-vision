@@ -8,16 +8,18 @@ from opencv         import *
 from opencv.highgui import *
 
 import sys
+import math
 
-scale = 1.3
+scale  = 1.3
+window = 8
 
 class FaceTracking:
     def __init__(self):
-        self.initGlut()
-        self.initCV()
-        self.initTracker()
+        self.init_glut()
+        self.init_cv()
+        self.init_tracker()
 
-    def initGlut(self):
+    def init_glut(self):
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
         glutInitWindowSize(640,480)
@@ -27,7 +29,7 @@ class FaceTracking:
         glShadeModel(GL_SMOOTH)
         glutDisplayFunc(self.on_display)
 
-    def initCV(self):
+    def init_cv(self):
         self.cascade = cvLoadHaarClassifierCascade('/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
         self.storage = cvCreateMemStorage(0)
         self.capture = cvCaptureFromCAM(0)
@@ -41,36 +43,71 @@ class FaceTracking:
         cvNamedWindow('frame', 1)
         cvNamedWindow('small', 1)
 
-    def initTracker(self):
+    def init_tracker(self):
         self.state   = 'find_face'
-        self.history = (None, None, None, None, None)
+        self.history = (None,) * window
 
-    def cleanupCV(self):
+    def cleanup_cv(self):
         cvDestroyWindow('result')
-        cvReleaseCapture(self.capture)
+        # cvReleaseCapture(self.capture)
         cvReleaseImage(self.gray)
         cvReleaseImage(self.small)
+
+    def rect_to_params(self, rect):
+        size     = (rect.width+rect.height)/2
+        x        = rect.x + (rect.width/2)
+        y        = rect.y + (rect.height/2)
+        distance = (110 - math.sqrt(12100 - 40*(350-size))) / 20
+        return (x, y, distance)
+
+    def on_display(self):
+        x, y, d, c = 0, 0, 0, 0
+        for (x1, y1, d1) in [h for h in self.history if h]:
+            x, y, d, c = x+x1, y+y1, d+d1, c+1
+        x, y, d = x / c, y / c, d / c
+
+        print x, y, d
+        glClear(GL_COLOR_BUFFER_BIT)
+        glutSwapBuffers()
 
     def main(self):
         while True:
             self.frame = cvQueryFrame(self.capture)
 
+            cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
+            cvResize(self.gray, self.small, CV_INTER_LINEAR)
+            cvEqualizeHist(self.small, self.small)
+            cvClearMemStorage(self.storage)
+
             if self.state == 'find_face':
-                cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
-                cvResize(self.gray, self.small, CV_INTER_LINEAR)
-                cvEqualizeHist(self.small, self.small)
-                cvClearMemStorage(self.storage)
+                best = None
 
-                faces = cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30))
-                if faces:
-                    r = faces[0]
-                    tl = cvPoint(int(r.x*scale), int(r.y*scale))
-                    br = cvPoint(int((r.x+r.width)*scale), int((r.y+r.height)*scale))
-                    cvRectangle(self.frame, tl, br, CV_RGB(255, 0, 0), 3, 8, 0)
-                    self.history = self.history[1:] + (r,)
+                for face in cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30))
+                    r = CvRect(face.x*scale, face.y*scale, face.width*scale, face.height*scale)
+                    if not best or r.height > best.height:
+                        best = r
+                    cvRectangle(self.frame, CvPoint(r.x, r.y), CvPoint(r.x+r.width, r.y+r.height), CV_RGB(255, 0, 0), 3, 8, 0)
 
-                cvShowImage('small', self.small)
+                if best:
+                    self.history = self.history[1:] + (self.rect_to_params(best),)
+                    self.state = 'track_face'
 
+            elif self.state == 'track_face':
+                last = self.history[-1]
+                best = None
+
+                for face in cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30))
+                    r = CvRect(face.x*scale, face.y*scale, face.width*scale, face.height*scale)
+                    if not best or abs(r.height-last.height) < abs(best.height-last.height):
+                        best = r
+                    cvRectangle(self.frame, CvPoint(r.x, r.y), CvPoint(r.x+r.width, r.y+r.height), CV_RGB(0, 0, 255), 3, 8, 0)
+
+                if best:
+                    self.history = self.history[1:] + (self.rect_to_params(best),)
+                else:
+                    self.state = 'find_face'
+
+            cvShowImage('small', self.small)
             cvShowImage('frame', self.frame)
 
             if cvWaitKey(10) == 0x1B:
@@ -79,20 +116,7 @@ class FaceTracking:
             glutPostRedisplay()
             glutMainLoopEvent()
 
-        self.cleanupCV()
-
-    def on_display(self):
-        x, y, s, c = 0, 0, 0, 0
-        for r in self.history:
-            if r:
-                x = x + r.x + (r.width/2)
-                y = y + r.y + (r.height/2)
-                s = s + ((r.height + r.width)/2)
-                c = c + 1
-        x, y, s = x / c, y / c, s / c
-        print x, y, s
-        glClear(GL_COLOR_BUFFER_BIT)
-        glutSwapBuffers()
+        self.cleanup_cv()
 
 def main():
     FaceTracking().main()
