@@ -50,10 +50,11 @@ class FaceTracking:
         cvDestroyWindow('result')
 
     def rect_to_params(self, rect):
-        size     = (rect.width + rect.height) / 2.0
-        distance = (140.0 - math.sqrt(13600 - 40*(340-size))) / 20.0
-        x        = ((rect.x + (rect.width  / 2.0)) - 320) / 160.0 * distance
-        y        = (240 - (rect.y + (rect.height / 2.0))) / 120.0 * distance
+        anglePerPixel = (3.14159 / 4.5) / 480.0
+        angle         = rect.width * anglePerPixel
+        distance      = (0.12/2.0) / math.tan(angle/2.0)
+        x             = (320 - (rect.x + (rect.width  / 2.0))) / 160.0 * distance
+        y             = (240 - (rect.y + (rect.height / 2.0))) / 120.0 * distance
         return (x, y, rect.height, distance)
 
     def on_reshape(self, w, h):
@@ -81,7 +82,7 @@ class FaceTracking:
 
         glLoadIdentity()
         glTranslatef(0.0, 0.0, -5.0)
-        gluLookAt(-x*3, y*3, abs(d*4), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        gluLookAt(x*4, y*4, abs(d*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         glBegin(GL_QUADS)
         glColor3f(0.0, 1.0, 0.0); glVertex3f( 1.0,  1.0, -1.0); glVertex3f(-1.0,  1.0, -1.0); glVertex3f(-1.0,  1.0,  1.0); glVertex3f( 1.0,  1.0,  1.0)
         glColor3f(1.0, 0.5, 0.0); glVertex3f( 1.0, -1.0,  1.0); glVertex3f(-1.0, -1.0,  1.0); glVertex3f(-1.0, -1.0, -1.0); glVertex3f( 1.0, -1.0, -1.0)
