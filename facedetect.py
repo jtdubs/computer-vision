@@ -5,6 +5,7 @@ from OpenGL.GLU  import *
 from OpenGL.GL   import *
 from opencv      import *
 from math        import *
+from random      import *
 import sys
 
 class FaceTracking:
@@ -13,6 +14,7 @@ class FaceTracking:
         self.init_glut()
         self.init_cv()
         self.init_tracker()
+        self.init_scene()
 
     def init_glut(self):
         glutInit(sys.argv)
@@ -45,6 +47,12 @@ class FaceTracking:
         self.state = 'find_face'
         self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 0
 
+    def init_scene(self):
+        def generate_target():
+            x, y, z = uniform(-7.5, 7.5), uniform(-4.5, 4.5), uniform(-15, 5)
+            return (x, y, z, (z+15.0)/15.0, 0, 0)
+        self.targets = [generate_target() for x in range(0, 30)]
+
     def on_reshape(self, w, h):
         glViewport(0, 0, w, h)
 
@@ -61,14 +69,27 @@ class FaceTracking:
         glLoadIdentity()
         glTranslatef(0.0, 0.0, -5.0)
         gluLookAt(self.x, self.y, abs(self.distance*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+
+        glBegin(GL_LINES)
+        for z in [0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15]:
+            glColor3f(1.0+(z/10.0), 1.0+(z/15.0), 1.0+(z/15.0))
+            glVertex3f(-8, -5, z); glVertex3f(-8,  5, z)
+            glVertex3f(-8, -5, z); glVertex3f( 8, -5, z)
+            glVertex3f( 8,  5, z); glVertex3f(-8,  5, z)
+            glVertex3f( 8,  5, z); glVertex3f( 8, -5, z)
+        for x in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, -5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x, -5, -15)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(x,  5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x,  5, -15)
+        for y in [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]:
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(-8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(-8, y, -15)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f( 8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f( 8, y, -15)
+        for (x, y, z, r, g, b) in self.targets:
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, y, z-0.01); glVertex3f(x, y, -15)
+        glEnd()
+
         glBegin(GL_QUADS)
-        for (x, y) in [(0, 0), (3, 1), (-1, -2), (-3, 3), (2, -3)]:
-            glColor3f(0.0, 0.0, 1.0); glVertex3f( 0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f( 0.1+x,  0.1+y,  2.0)
-            glColor3f(0.0, 1.0, 0.0); glVertex3f( 0.1+x, -0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f( 0.1+x, -0.1+y, -2.0)
-            glColor3f(0.0, 1.0, 1.0); glVertex3f( 0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y,  2.0)
-            glColor3f(1.0, 0.0, 0.0); glVertex3f( 0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f( 0.1+x,  0.1+y, -2.0)
-            glColor3f(1.0, 0.0, 1.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y,  2.0)
-            glColor3f(1.0, 1.0, 0.0); glVertex3f( 0.1+x,  0.1+y, -2.0); glVertex3f( 0.1+x,  0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y, -2.0)
+        for (x, y, z, r, g, b) in self.targets:
+            glColor3f(r, g, b); glVertex3f(0.5+x, 0.5+y, z); glVertex3f(-0.5+x, 0.5+y, z); glVertex3f(-0.5+x, -0.5+y, z); glVertex3f(0.5+x, -0.5+y, z)
         glEnd()
 
         glutSwapBuffers()
