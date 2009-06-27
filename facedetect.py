@@ -71,20 +71,20 @@ class FaceTracking:
         gluLookAt(self.x, self.y, abs(self.distance*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 
         glBegin(GL_LINES)
-        for z in [0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15]:
+        for z in range(-15, 1):
             glColor3f(1.0+(z/10.0), 1.0+(z/15.0), 1.0+(z/15.0))
             glVertex3f(-8, -5, z); glVertex3f(-8,  5, z)
             glVertex3f(-8, -5, z); glVertex3f( 8, -5, z)
             glVertex3f( 8,  5, z); glVertex3f(-8,  5, z)
             glVertex3f( 8,  5, z); glVertex3f( 8, -5, z)
-        for x in [-4, -3, -2, -1, 0, 1, 2, 3, 4]:
+        for x in range(-8, 9):
             glColor3f(1.0, 1.0, 1.0); glVertex3f(x, -5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x, -5, -15)
             glColor3f(1.0, 1.0, 1.0); glVertex3f(x,  5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x,  5, -15)
-        for y in [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6]:
+        for y in range(-5, 6):
             glColor3f(1.0, 1.0, 1.0); glVertex3f(-8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(-8, y, -15)
             glColor3f(1.0, 1.0, 1.0); glVertex3f( 8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f( 8, y, -15)
         for (x, y, z, r, g, b) in self.targets:
-            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, y, z-0.01); glVertex3f(x, y, -15)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, y, z-0.02); glColor3f(0.0, 0.0, 0.0); glVertex3f(x, y, -15)
         glEnd()
 
         glBegin(GL_QUADS)
