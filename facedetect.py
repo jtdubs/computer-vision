@@ -87,12 +87,12 @@ class FaceTracking:
         gluLookAt(x*2, y*2, abs(d*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         glBegin(GL_QUADS)
         for (x, y) in [(0, 0), (3, 1), (-1, -2), (-3, 3), (2, -3)]:
-            glColor3f(0.0, 1.0, 0.0); glVertex3f( 0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f( 0.1+x,  0.1+y,  2.0)
-            glColor3f(1.0, 0.1, 0.0); glVertex3f( 0.1+x, -0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f( 0.1+x, -0.1+y, -2.0)
-            glColor3f(1.0, 0.0, 0.0); glVertex3f( 0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y,  2.0)
-            glColor3f(1.0, 1.0, 0.0); glVertex3f( 0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f( 0.1+x,  0.1+y, -2.0)
-            glColor3f(0.0, 0.0, 1.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y,  2.0)
-            glColor3f(1.0, 0.0, 1.0); glVertex3f( 0.1+x,  0.1+y, -2.0); glVertex3f( 0.1+x,  0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y, -2.0)
+            glColor3f(0.0, 0.0, 1.0); glVertex3f( 0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f( 0.1+x,  0.1+y,  2.0)
+            glColor3f(0.0, 1.0, 0.0); glVertex3f( 0.1+x, -0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f( 0.1+x, -0.1+y, -2.0)
+            glColor3f(0.0, 1.0, 1.0); glVertex3f( 0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x, -0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y,  2.0)
+            glColor3f(1.0, 0.0, 0.0); glVertex3f( 0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f( 0.1+x,  0.1+y, -2.0)
+            glColor3f(1.0, 0.0, 1.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y, -2.0); glVertex3f(-0.1+x, -0.1+y,  2.0)
+            glColor3f(1.0, 1.0, 0.0); glVertex3f( 0.1+x,  0.1+y, -2.0); glVertex3f( 0.1+x,  0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y,  2.0); glVertex3f( 0.1+x, -0.1+y, -2.0)
         glEnd()
 
         glutSwapBuffers()
