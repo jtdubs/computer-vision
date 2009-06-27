@@ -25,29 +25,39 @@ class FaceTracking:
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glShadeModel(GL_SMOOTH)
         glEnable(GL_DEPTH_TEST)
+        glEnable(GL_TEXTURE_2D)
         glutReshapeFunc(self.on_reshape)
         glutDisplayFunc(self.on_display)
         glutKeyboardFunc(self.on_key)
+
+        self.frame_texture = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.frame_texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
+        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
     def init_cv(self):
         self.cascade  = cvLoadHaarClassifierCascade('/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
         self.storage  = cvCreateMemStorage(0)
         self.capture  = cvCaptureFromCAM(0)
-        frame         = cvQueryFrame(self.capture)
-        self.gray     = cvCreateImage(cvSize(frame.width, frame.height), 8, 1)
-        self.prev     = cvCreateImage(cvSize(frame.width, frame.height), 8, 1)
-        self.small    = cvCreateImage(CvSize(int(frame.width/self.scale), int(frame.height/self.scale)),  8, 1)
-        self.eigs     = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
-        self.temp     = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
-        self.pyr_a    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
-        self.pyr_b    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
+        self.frame    = cvQueryFrame(self.capture)
+        self.gray     = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
+        self.prev     = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
+        self.small    = cvCreateImage(CvSize(int(self.frame.width/self.scale), int(self.frame.height/self.scale)), 8, 1)
+        self.eigs     = cvCreateImage(CvSize(self.frame.width, self.frame.height), 32, 1)
+        self.temp     = cvCreateImage(CvSize(self.frame.width, self.frame.height), 32, 1)
+        self.pyr_a    = cvCreateImage(CvSize(self.frame.width, self.frame.height), 32, 1)
+        self.pyr_b    = cvCreateImage(CvSize(self.frame.width, self.frame.height), 32, 1)
         self.features = None
-        cvNamedWindow('frame', 1)
 
     def init_tracker(self):
         self.state = 'calibrate'
         self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 1
-        self.done  = False
+        self.done = False
+        self.show_frame = False
 
     def init_scene(self):
         def generate_target():
@@ -84,6 +94,8 @@ class FaceTracking:
 
     def on_reshape(self, w, h):
         glViewport(0, 0, w, h)
+        self.width  = w
+        self.height = h
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -98,6 +110,33 @@ class FaceTracking:
         glTranslatef(0.0, 0.0, -5.0)
         gluLookAt(self.x, self.y, abs(self.distance*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         glCallList(self.scene);
+
+        if self.show_frame:
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            glOrtho(0, self.width, self.height, 0, -1, 1)
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            glLoadIdentity()
+
+            glBindTexture(GL_TEXTURE_2D, self.frame_texture)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 640, 480, 0, GL_BGR, GL_UNSIGNED_BYTE, self.frame.data_as_string());
+            glBegin(GL_POLYGON);
+            glTexCoord2f(0.0, 0.0); glVertex2f(  0.0,   0.0)
+            glTexCoord2f(1.0, 0.0); glVertex2f(320.0,   0.0)
+            glTexCoord2f(1.0, 1.0); glVertex2f(320.0, 240.0)
+            glTexCoord2f(0.0, 1.0); glVertex2f(  0.0, 240.0)
+            glEnd();
+            glBindTexture(GL_TEXTURE_2D, 0)
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
+
         glutSwapBuffers()
 
     def on_key(self, k, *args):
@@ -105,20 +144,22 @@ class FaceTracking:
             self.done = True
         elif k in ['r', chr(10), chr(13)]:
             self.state = 'find_face'
+        elif k in ['f']:
+            self.show_frame = not self.show_frame
 
-    def state_calibrate(self, frame):
+    def state_calibrate(self):
         best = None
 
         for face in cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
             r = CvRect(int(face.x*self.scale), int(face.y*self.scale), int(face.width*self.scale), int(face.height*self.scale))
             if not best or r.height > best.height:
                 best = r
-            cvRectangle(frame, CvPoint(r.x, r.y), CvPoint(r.x+r.width, r.y+r.height), CV_RGB(255, 0, 0), 3, 8, 0)
+            cvRectangle(self.frame, CvPoint(r.x, r.y), CvPoint(r.x+r.width, r.y+r.height), CV_RGB(255, 0, 0), 3, 8, 0)
 
         if best:
-            cvRectangle(frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
+            cvRectangle(self.frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
 
-    def state_find_face(self, frame):
+    def state_find_face(self):
         best = None
 
         for face in cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
@@ -149,7 +190,7 @@ class FaceTracking:
             self.flags    = 0
             self.state    = 'track_face'
 
-    def state_track_face(self, frame):
+    def state_track_face(self):
         features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(50, 50), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), self.flags)
         features = [x for x in features]
         dx, dy, min_x, max_x, = 0, 0, 1000, 0
@@ -160,7 +201,7 @@ class FaceTracking:
                 dx = dx + (self.features[i].x - features[i].x)
                 dy = dy + (self.features[i].y - features[i].y)
                 min_x, max_x = min(min_x, features[i].x), max(max_x, features[i].x)
-                cvCircle(frame, cvPoint(int(features[i].x), int(features[i].y)), 3, CV_RGB(0, 0, 255), 1)
+                cvCircle(self.frame, cvPoint(int(features[i].x), int(features[i].y)), 3, CV_RGB(0, 0, 255), 1)
 
         features = [x for x in features if x]
         if len(features) > 0:
@@ -180,24 +221,22 @@ class FaceTracking:
 
     def main(self):
         while not self.done:
-            frame = cvQueryFrame(self.capture)
+            self.frame = cvQueryFrame(self.capture)
 
-            cvCvtColor(frame, self.gray, CV_BGR2GRAY)
+            cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
             cvResize(self.gray, self.small, CV_INTER_LINEAR)
             cvEqualizeHist(self.small, self.small)
             cvClearMemStorage(self.storage)
 
             if self.state == 'calibrate':
-                self.state_calibrate(frame)
+                self.state_calibrate()
             elif self.state == 'find_face':
-                self.state_find_face(frame)
+                self.state_find_face()
             elif self.state == 'track_face':
-                self.state_track_face(frame)
+                self.state_track_face()
 
             cvCopy(self.gray, self.prev)
             self.pyr_a, self.pyr_b = self.pyr_b, self.pyr_a
-
-            cvShowImage('frame', frame)
 
             k = cvWaitKey(10)
             if 0 <= k <= 255:
