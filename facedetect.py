@@ -3,17 +3,13 @@
 from OpenGL.GLUT import *
 from OpenGL.GLU  import *
 from OpenGL.GL   import *
-
-from opencv import *
-
-from math import *
+from opencv      import *
+from math        import *
 import sys
 
 class FaceTracking:
     def __init__(self):
-        self.window = 5
-        self.scale  = 1.3
-
+        self.scale = 1.3
         self.init_glut()
         self.init_cv()
         self.init_tracker()
@@ -22,7 +18,7 @@ class FaceTracking:
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
         glutInitWindowSize(640, 480)
-        glutCreateWindow('Face Recognition')
+        glutCreateWindow('Face Tracking')
 
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glShadeModel(GL_SMOOTH)
@@ -43,16 +39,11 @@ class FaceTracking:
         self.pyr_a    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
         self.pyr_b    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
         self.features = None
-
         cvNamedWindow('frame', 1)
 
     def init_tracker(self):
-        self.state   = 'find_face'
-        self.flags   = 0
-        self.x, self.y, self.spread, self.distance = 0, 0, 0, 0
-
-    def cleanup_cv(self):
-        cvDestroyWindow('result')
+        self.state = 'find_face'
+        self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 0
 
     def on_reshape(self, w, h):
         glViewport(0, 0, w, h)
@@ -89,23 +80,19 @@ class FaceTracking:
             r = CvRect(int(face.x*self.scale), int(face.y*self.scale), int(face.width*self.scale), int(face.height*self.scale))
             if not best or r.height > best.height:
                 best = r
-            cvRectangle(frame, CvPoint(r.x, r.y), CvPoint(r.x+r.width, r.y+r.height), CV_RGB(255, 0, 0), 3, 8, 0)
 
         if best:
-            cvSetImageROI(self.gray, best)
-            cvSetImageROI(self.eigs, best)
-            cvSetImageROI(self.temp, best)
+            for image in [self.gray, self.eigs, self.temp]:
+                cvSetImageROI(image, best)
 
             self.features = [x for x in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 20, 0.02, 4.0, use_harris=False)]
-            min_x, max_x, = 1000, 0
+            min_x, max_x  = 1000, 0
             for f in self.features:
                 f.x, f.y = f.x + best.x, f.y + best.y
                 min_x, max_x = min(min_x, f.x), max(max_x, f.x)
-                cvCircle(frame, cvPoint(int(f.x), int(f.y)), 3, CV_RGB(0, 0, 255), 1)
 
-            cvResetImageROI(self.gray)
-            cvResetImageROI(self.eigs)
-            cvResetImageROI(self.temp)
+            for image in [self.gray, self.eigs, self.temp]:
+                cvResetImageROI(image)
 
             anglePerPixel = (3.14159 / 4.5) / 480.0
             angle         = best.width * anglePerPixel
@@ -123,19 +110,20 @@ class FaceTracking:
         dx, dy, min_x, max_x, = 0, 0, 1000, 0
         for i in range(0, len(features)):
             if ord(status[i]) == 0:
-                print "lost:", i
                 features[i] = None
             else:
                 dx = dx + (self.features[i].x - features[i].x)
                 dy = dy + (self.features[i].y - features[i].y)
                 min_x, max_x = min(min_x, features[i].x), max(max_x, features[i].x)
                 cvCircle(frame, cvPoint(int(features[i].x), int(features[i].y)), 3, CV_RGB(0, 0, 255), 1)
+
         features = [x for x in features if x]
         if len(features) > 0:
             dx, dy = dx / len(features), dy / len(features)
-        self.features = features
 
         spread = max_x - min_x
+
+        self.features = features
         self.distance  = self.distance * (self.spread / spread)
         self.x         = self.x + (dx / 160.0 * self.distance)
         self.y         = self.y + (dy / 120.0 * self.distance)
@@ -143,7 +131,6 @@ class FaceTracking:
         self.spread    = spread
 
         if len(self.features) < 5:
-            print "noes"
             self.state = 'find_face'
 
     def main(self):
@@ -171,10 +158,5 @@ class FaceTracking:
             glutPostRedisplay()
             glutMainLoopEvent()
 
-        self.cleanup_cv()
-
-def main():
-    FaceTracking().main()
-
 if __name__ == '__main__':
-    main()
+    FaceTracking().main()
