@@ -63,7 +63,7 @@ class FaceTracking:
         def generate_target():
             x, y, z = uniform(-7.5, 7.5), uniform(-4.5, 4.5), uniform(-15, 5)
             return (x, y, z, (z+15.0)/15.0, 0, 0)
-        targets = [generate_target() for x in range(0, 30)]
+        targets = [generate_target() for x in range(0, 40)]
 
         self.scene = glGenLists(1)
         glNewList(self.scene, GL_COMPILE)
@@ -144,6 +144,10 @@ class FaceTracking:
             sys.exit(0)
         elif k in ['r', chr(10), chr(13)]:
             self.state = 'find_face'
+        elif k in ['c']:
+            self.state = 'calibrate'
+        elif k in ['s']:
+            self.init_scene()
         elif k in ['f']:
             self.show_frame = not self.show_frame
 
