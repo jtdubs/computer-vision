@@ -153,13 +153,22 @@ class FaceTracking:
                     self.history = self.history[1:] + (self.rect_to_params(best),)
 
                     features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyra, self.pyrb, self.features, None, None, CvSize(50, 50), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), CV_LKFLOW_PYR_A_READY)
-                    self.features = [x for x in features]
+                    new_features = [x for x in features]
+                    dx, dy = 0, 0
                     for i in range(0, len(features)):
                         if ord(status[i]) == 0:
                             print "lost feature:", i
-                            del self.features[i]
+                            del new_features[i]
                         else:
+                            dx = dx + (features[i].x - self.features[i].x)
+                            dy = dy + (features[i].y - self.features[i].y)
                             cvCircle(frame, cvPoint(int(features[i].x), int(features[i].y)), 3, CV_RGB(0, 0, 255), 1)
+                    if len(new_features) > 0:
+                        dx, dy = dx / len(new_features), dy / len(new_features)
+                    self.features = new_features
+
+                    print "estimated motion:", dx, dy
+
                     if len(self.features) < 5:
                         self.state = 'find_face'
                 else:
