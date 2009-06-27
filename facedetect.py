@@ -29,6 +29,7 @@ class FaceTracking:
         glutReshapeFunc(self.on_reshape)
         glutDisplayFunc(self.on_display)
         glutKeyboardFunc(self.on_key)
+        glutIdleFunc(self.on_idle)
 
         self.frame_texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.frame_texture);
@@ -56,7 +57,6 @@ class FaceTracking:
     def init_tracker(self):
         self.state = 'calibrate'
         self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 1
-        self.done = False
         self.show_frame = False
 
     def init_scene(self):
@@ -141,11 +141,31 @@ class FaceTracking:
 
     def on_key(self, k, *args):
         if k in ['q', chr(27)]:
-            self.done = True
+            sys.exit(0)
         elif k in ['r', chr(10), chr(13)]:
             self.state = 'find_face'
         elif k in ['f']:
             self.show_frame = not self.show_frame
+
+    def on_idle(self):
+        self.frame = cvQueryFrame(self.capture)
+
+        cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
+        cvResize(self.gray, self.small, CV_INTER_LINEAR)
+        cvEqualizeHist(self.small, self.small)
+        cvClearMemStorage(self.storage)
+
+        if self.state == 'calibrate':
+            self.state_calibrate()
+        elif self.state == 'find_face':
+            self.state_find_face()
+        elif self.state == 'track_face':
+            self.state_track_face()
+
+        cvCopy(self.gray, self.prev)
+        self.pyr_a, self.pyr_b = self.pyr_b, self.pyr_a
+
+        glutPostRedisplay()
 
     def state_calibrate(self):
         best = None
@@ -220,30 +240,7 @@ class FaceTracking:
             self.state = 'find_face'
 
     def main(self):
-        while not self.done:
-            self.frame = cvQueryFrame(self.capture)
-
-            cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
-            cvResize(self.gray, self.small, CV_INTER_LINEAR)
-            cvEqualizeHist(self.small, self.small)
-            cvClearMemStorage(self.storage)
-
-            if self.state == 'calibrate':
-                self.state_calibrate()
-            elif self.state == 'find_face':
-                self.state_find_face()
-            elif self.state == 'track_face':
-                self.state_track_face()
-
-            cvCopy(self.gray, self.prev)
-            self.pyr_a, self.pyr_b = self.pyr_b, self.pyr_a
-
-            k = cvWaitKey(10)
-            if 0 <= k <= 255:
-                self.on_key(chr(k))
-
-            glutPostRedisplay()
-            glutMainLoopEvent()
+        glutMainLoop()
 
 if __name__ == '__main__':
     FaceTracking().main()
