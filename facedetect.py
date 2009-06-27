@@ -40,6 +40,8 @@ class FaceTracking:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
+        self.scene = glGenLists(1)
+
     def init_cv(self):
         self.cascade  = cvLoadHaarClassifierCascade('/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
         self.storage  = cvCreateMemStorage(0)
@@ -65,7 +67,6 @@ class FaceTracking:
             return (x, y, z, (z+15.0)/15.0, 0, 0)
         targets = [generate_target() for x in range(0, 40)]
 
-        self.scene = glGenLists(1)
         glNewList(self.scene, GL_COMPILE)
 
         glBegin(GL_LINES)
