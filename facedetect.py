@@ -60,7 +60,7 @@ class FaceTracking:
 
         glLoadIdentity()
         glTranslatef(0.0, 0.0, -5.0)
-        gluLookAt(self.x*2, self.y*2, abs(self.distance*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        gluLookAt(self.x, self.y, abs(self.distance*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         glBegin(GL_QUADS)
         for (x, y) in [(0, 0), (3, 1), (-1, -2), (-3, 3), (2, -3)]:
             glColor3f(0.0, 0.0, 1.0); glVertex3f( 0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y, -2.0); glVertex3f(-0.1+x,  0.1+y,  2.0); glVertex3f( 0.1+x,  0.1+y,  2.0)
