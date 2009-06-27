@@ -37,7 +37,9 @@ class FaceTracking:
         self.capture = cvCaptureFromCAM(0)
         frame        = cvQueryFrame(self.capture)
         self.gray    = cvCreateImage(cvSize(frame.width, frame.height), 8, 1)
-        self.small   = cvCreateImage(CvSize(int(frame.width/self.scale), int(frame.height/self.scale)), 8, 1)
+        self.small   = cvCreateImage(CvSize(int(frame.width/self.scale), int(frame.height/self.scale)),  8, 1)
+        self.eigs    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
+        self.temp    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
 
         cvNamedWindow('frame', 1)
         cvNamedWindow('small', 1)
@@ -117,6 +119,17 @@ class FaceTracking:
                     self.history = self.history[1:] + (self.rect_to_params(best),)
                     self.state = 'track_face'
 
+                    cvSetImageROI(self.gray, best)
+                    cvSetImageROI(self.eigs, best)
+                    cvSetImageROI(self.temp, best)
+
+                    for p in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.02, 4.0, use_harris=False):
+                        cvCircle(frame, cvPoint(int(p.x + best.x), int(p.y + best.y)), 3, CV_RGB(0, 0, 255), 1)
+
+                    cvResetImageROI(self.gray)
+                    cvResetImageROI(self.eigs)
+                    cvResetImageROI(self.temp)
+
             elif self.state == 'track_face':
                 (x, y, height, size) = self.history[-1]
                 best = None
@@ -130,6 +143,17 @@ class FaceTracking:
                 if best:
                     cvRectangle(frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
                     self.history = self.history[1:] + (self.rect_to_params(best),)
+
+                    cvSetImageROI(self.gray, best)
+                    cvSetImageROI(self.eigs, best)
+                    cvSetImageROI(self.temp, best)
+
+                    for p in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.02, 4.0, use_harris=False):
+                        cvCircle(frame, cvPoint(int(p.x + best.x), int(p.y + best.y)), 3, CV_RGB(0, 0, 255), 1)
+
+                    cvResetImageROI(self.gray)
+                    cvResetImageROI(self.eigs)
+                    cvResetImageROI(self.temp)
                 else:
                     self.state = 'find_face'
 
