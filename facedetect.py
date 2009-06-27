@@ -32,14 +32,18 @@ class FaceTracking:
         glutDisplayFunc(self.on_display)
 
     def init_cv(self):
-        self.cascade = cvLoadHaarClassifierCascade('/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
-        self.storage = cvCreateMemStorage(0)
-        self.capture = cvCaptureFromCAM(0)
-        frame        = cvQueryFrame(self.capture)
-        self.gray    = cvCreateImage(cvSize(frame.width, frame.height), 8, 1)
-        self.small   = cvCreateImage(CvSize(int(frame.width/self.scale), int(frame.height/self.scale)),  8, 1)
-        self.eigs    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
-        self.temp    = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
+        self.cascade  = cvLoadHaarClassifierCascade('/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
+        self.storage  = cvCreateMemStorage(0)
+        self.capture  = cvCaptureFromCAM(0)
+        frame         = cvQueryFrame(self.capture)
+        self.gray     = cvCreateImage(cvSize(frame.width, frame.height), 8, 1)
+        self.prev     = cvCreateImage(cvSize(frame.width, frame.height), 8, 1)
+        self.small    = cvCreateImage(CvSize(int(frame.width/self.scale), int(frame.height/self.scale)),  8, 1)
+        self.eigs     = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
+        self.temp     = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
+        self.pyra     = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
+        self.pyrb     = cvCreateImage(CvSize(frame.width, frame.height), 32, 1)
+        self.features = None
 
         cvNamedWindow('frame', 1)
         cvNamedWindow('small', 1)
@@ -123,8 +127,11 @@ class FaceTracking:
                     cvSetImageROI(self.eigs, best)
                     cvSetImageROI(self.temp, best)
 
-                    for p in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.02, 4.0, use_harris=False):
-                        cvCircle(frame, cvPoint(int(p.x + best.x), int(p.y + best.y)), 3, CV_RGB(0, 0, 255), 1)
+                    self.features = cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.02, 4.0, use_harris=False)
+                    for f in self.features:
+                        f.x = f.x + best.x
+                        f.y = f.y + best.y
+                        cvCircle(frame, cvPoint(int(f.x), int(f.y)), 3, CV_RGB(0, 0, 255), 1)
 
                     cvResetImageROI(self.gray)
                     cvResetImageROI(self.eigs)
@@ -144,18 +151,14 @@ class FaceTracking:
                     cvRectangle(frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
                     self.history = self.history[1:] + (self.rect_to_params(best),)
 
-                    cvSetImageROI(self.gray, best)
-                    cvSetImageROI(self.eigs, best)
-                    cvSetImageROI(self.temp, best)
-
-                    for p in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.02, 4.0, use_harris=False):
-                        cvCircle(frame, cvPoint(int(p.x + best.x), int(p.y + best.y)), 3, CV_RGB(0, 0, 255), 1)
-
-                    cvResetImageROI(self.gray)
-                    cvResetImageROI(self.eigs)
-                    cvResetImageROI(self.temp)
+                    self.features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyra, self.pyrb, self.features, None, None, CvSize(200, 200), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), CV_LKFLOW_PYR_A_READY)
+                    for f in self.features:
+                        cvCircle(frame, cvPoint(int(f.x), int(f.y)), 3, CV_RGB(0, 0, 255), 1)
                 else:
                     self.state = 'find_face'
+
+            cvCopy(self.gray, self.prev)
+            self.pyra, self.pyrb = self.pyrb, self.pyra
 
             cvShowImage('small', self.small)
             cvShowImage('frame', frame)
