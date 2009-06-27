@@ -97,9 +97,9 @@ class FaceTracking:
         glutSwapBuffers()
 
     def on_key(self, k, *args):
-        if k == 'q' or k == chr(27):
+        if k in ['q', chr(27)]:
             self.done = True
-        elif k == 'r':
+        elif k in ['r', chr(10), chr(13)]:
             self.state = 'find_face'
 
     def state_calibrate(self, frame):
