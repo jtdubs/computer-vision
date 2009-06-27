@@ -27,6 +27,7 @@ class FaceTracking:
         glEnable(GL_DEPTH_TEST)
         glutReshapeFunc(self.on_reshape)
         glutDisplayFunc(self.on_display)
+        glutKeyboardFunc(self.on_key)
 
     def init_cv(self):
         self.cascade  = cvLoadHaarClassifierCascade('/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
@@ -44,8 +45,9 @@ class FaceTracking:
         cvNamedWindow('frame', 1)
 
     def init_tracker(self):
-        self.state = 'find_face'
-        self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 0
+        self.state = 'calibrate'
+        self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 1
+        self.done  = False
 
     def init_scene(self):
         def generate_target():
@@ -93,6 +95,24 @@ class FaceTracking:
         glEnd()
 
         glutSwapBuffers()
+
+    def on_key(self, k, *args):
+        if k == 'q' or k == chr(27):
+            self.done = True
+        elif k == 'r':
+            self.state = 'find_face'
+
+    def state_calibrate(self, frame):
+        best = None
+
+        for face in cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
+            r = CvRect(int(face.x*self.scale), int(face.y*self.scale), int(face.width*self.scale), int(face.height*self.scale))
+            if not best or r.height > best.height:
+                best = r
+            cvRectangle(frame, CvPoint(r.x, r.y), CvPoint(r.x+r.width, r.y+r.height), CV_RGB(255, 0, 0), 3, 8, 0)
+
+        if best:
+            cvRectangle(frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
 
     def state_find_face(self, frame):
         best = None
@@ -155,7 +175,7 @@ class FaceTracking:
             self.state = 'find_face'
 
     def main(self):
-        while True:
+        while not self.done:
             frame = cvQueryFrame(self.capture)
 
             cvCvtColor(frame, self.gray, CV_BGR2GRAY)
@@ -163,7 +183,9 @@ class FaceTracking:
             cvEqualizeHist(self.small, self.small)
             cvClearMemStorage(self.storage)
 
-            if self.state == 'find_face':
+            if self.state == 'calibrate':
+                self.state_calibrate(frame)
+            elif self.state == 'find_face':
                 self.state_find_face(frame)
             elif self.state == 'track_face':
                 self.state_track_face(frame)
@@ -174,8 +196,8 @@ class FaceTracking:
             cvShowImage('frame', frame)
 
             k = cvWaitKey(10)
-            if   k == 27:       break
-            elif k == ord('r'): self.state = 'find_face'
+            if 0 <= k <= 255:
+                self.on_key(chr(k))
 
             glutPostRedisplay()
             glutMainLoopEvent()
