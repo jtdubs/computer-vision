@@ -10,7 +10,6 @@ import sys
 
 class FaceTracking:
     def __init__(self):
-        self.scale = 1.3
         self.init_glut()
         self.init_cv()
         self.init_tracker()
@@ -49,7 +48,6 @@ class FaceTracking:
         self.frame    = cvQueryFrame(self.capture)
         self.gray     = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
         self.prev     = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
-        self.small    = cvCreateImage(CvSize(int(self.frame.width/self.scale), int(self.frame.height/self.scale)), 8, 1)
         self.eigs     = cvCreateImage(CvSize(self.frame.width, self.frame.height), 32, 1)
         self.temp     = cvCreateImage(CvSize(self.frame.width, self.frame.height), 32, 1)
         self.pyr_a    = cvCreateImage(CvSize(self.frame.width, self.frame.height), 32, 1)
@@ -156,8 +154,7 @@ class FaceTracking:
         self.frame = cvQueryFrame(self.capture)
 
         cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
-        cvResize(self.gray, self.small, CV_INTER_LINEAR)
-        cvEqualizeHist(self.small, self.small)
+        cvEqualizeHist(self.gray, self.gray)
         cvClearMemStorage(self.storage)
 
         if self.state == 'calibrate':
@@ -175,11 +172,10 @@ class FaceTracking:
     def state_calibrate(self):
         best = None
 
-        for face in cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
-            r = CvRect(int(face.x*self.scale), int(face.y*self.scale), int(face.width*self.scale), int(face.height*self.scale))
-            if not best or r.height > best.height:
-                best = r
-            cvRectangle(self.frame, CvPoint(r.x, r.y), CvPoint(r.x+r.width, r.y+r.height), CV_RGB(255, 0, 0), 3, 8, 0)
+        for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
+            if not best or face.height > best.height:
+                best = face
+            cvRectangle(self.frame, CvPoint(face.x, face.y), CvPoint(face.x+face.width, face.y+face.height), CV_RGB(255, 0, 0), 3, 8, 0)
 
         if best:
             cvRectangle(self.frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
@@ -187,10 +183,9 @@ class FaceTracking:
     def state_find_face(self):
         best = None
 
-        for face in cvHaarDetectObjects(self.small, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
-            r = CvRect(int(face.x*self.scale), int(face.y*self.scale), int(face.width*self.scale), int(face.height*self.scale))
-            if not best or r.height > best.height:
-                best = r
+        for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
+            if not best or face.height > best.height:
+                best = face
 
         if best:
             for image in [self.gray, self.eigs, self.temp]:
