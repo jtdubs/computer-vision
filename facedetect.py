@@ -4,11 +4,10 @@ from OpenGL.GLUT import *
 from OpenGL.GLU  import *
 from OpenGL.GL   import *
 
-from opencv         import *
-from opencv.highgui import *
+from opencv import *
 
+from math import *
 import sys
-import math
 
 class FaceTracking:
     def __init__(self):
@@ -58,7 +57,7 @@ class FaceTracking:
     def rect_to_params(self, rect):
         anglePerPixel = (3.14159 / 4.5) / 480.0
         angle         = rect.width * anglePerPixel
-        distance      = (0.12/2.0) / math.tan(angle/2.0)
+        distance      = (0.12/2.0) / tan(angle/2.0)
         x             = (320 - (rect.x + (rect.width  / 2.0))) / 160.0 * distance
         y             = (240 - (rect.y + (rect.height / 2.0))) / 120.0 * distance
         return (x, y, rect.height, distance)
