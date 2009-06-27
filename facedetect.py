@@ -174,7 +174,7 @@ class FaceTracking:
         self.face_candidate = None
 
         for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(100, 100)):
-            conservative = CvRect(face.x+40, face.y+40, face.width-80, face.height-80)
+            conservative = CvRect(face.x+30, face.y+30, face.width-60, face.height-60)
 
             if not self.face_candidate or conservative.height > self.face_candidate.height:
                 self.face_candidate = conservative
@@ -194,7 +194,7 @@ class FaceTracking:
         for image in [self.gray, self.eigs, self.temp]:
             cvSetImageROI(image, self.face_candidate)
 
-        self.features = [x for x in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.1, 4.0, use_harris=False)]
+        self.features = [x for x in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.05, 6.0, use_harris=False)]
         min_x, max_x  = 1000, 0
         for f in self.features:
             f.x, f.y = f.x + self.face_candidate.x, f.y + self.face_candidate.y
@@ -206,7 +206,7 @@ class FaceTracking:
             cvResetImageROI(image)
 
         anglePerPixel = (3.14159 / 4.5) / 480.0
-        angle         = (self.face_candidate.width + 80) * anglePerPixel
+        angle         = (self.face_candidate.width + 60) * anglePerPixel
 
         self.distance = (0.12/2.0) / tan(angle/2.0)
         self.x        = (320 - (self.face_candidate.x + (self.face_candidate.width  / 2.0))) / 160.0 * self.distance
