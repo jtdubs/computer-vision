@@ -152,8 +152,9 @@ class FaceTracking:
 
             cvShowImage('frame', frame)
 
-            if cvWaitKey(10) == 0x1B:
-                break
+            k = cvWaitKey(10)
+            if   k == 27:       break
+            elif k == ord('r'): self.state = 'find_face'
 
             glutPostRedisplay()
             glutMainLoopEvent()
