@@ -127,7 +127,8 @@ class FaceTracking:
                     cvSetImageROI(self.eigs, best)
                     cvSetImageROI(self.temp, best)
 
-                    self.features = cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.02, 4.0, use_harris=False)
+                    self.features = [x for x in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 20, 0.02, 4.0, use_harris=False)]
+                    print "identified features:", len(self.features)
                     for f in self.features:
                         f.x = f.x + best.x
                         f.y = f.y + best.y
@@ -151,9 +152,16 @@ class FaceTracking:
                     cvRectangle(frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
                     self.history = self.history[1:] + (self.rect_to_params(best),)
 
-                    self.features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyra, self.pyrb, self.features, None, None, CvSize(200, 200), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), CV_LKFLOW_PYR_A_READY)
-                    for f in self.features:
-                        cvCircle(frame, cvPoint(int(f.x), int(f.y)), 3, CV_RGB(0, 0, 255), 1)
+                    features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyra, self.pyrb, self.features, None, None, CvSize(50, 50), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), CV_LKFLOW_PYR_A_READY)
+                    self.features = [x for x in features]
+                    for i in range(0, len(features)):
+                        if ord(status[i]) == 0:
+                            print "lost feature:", i
+                            del self.features[i]
+                        else:
+                            cvCircle(frame, cvPoint(int(features[i].x), int(features[i].y)), 3, CV_RGB(0, 0, 255), 1)
+                    if len(self.features) < 5:
+                        self.state = 'find_face'
                 else:
                     self.state = 'find_face'
 
