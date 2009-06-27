@@ -55,9 +55,10 @@ class FaceTracking:
         self.features = None
 
     def init_tracker(self):
-        self.state = 'calibrate'
+        self.state = 'choose_face'
         self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 1
         self.show_frame = False
+        self.face_candidate = None
 
     def init_scene(self):
         def generate_target():
@@ -141,10 +142,10 @@ class FaceTracking:
     def on_key(self, k, *args):
         if k in ['q', chr(27)]:
             sys.exit(0)
-        elif k in ['r', chr(10), chr(13)]:
-            self.state = 'find_face'
+        elif k in ['m', chr(10), chr(13)]:
+            self.state = 'mark_face'
         elif k in ['c']:
-            self.state = 'calibrate'
+            self.state = 'choose_face'
         elif k in ['s']:
             self.init_scene()
         elif k in ['f']:
@@ -157,10 +158,10 @@ class FaceTracking:
         cvEqualizeHist(self.gray, self.gray)
         cvClearMemStorage(self.storage)
 
-        if self.state == 'calibrate':
-            self.state_calibrate()
-        elif self.state == 'find_face':
-            self.state_find_face()
+        if self.state == 'choose_face':
+            self.state_choose_face()
+        elif self.state == 'mark_face':
+            self.state_mark_face()
         elif self.state == 'track_face':
             self.state_track_face()
 
@@ -169,46 +170,50 @@ class FaceTracking:
 
         glutPostRedisplay()
 
-    def state_calibrate(self):
-        best = None
+    def state_choose_face(self):
+        self.face_candidate = None
 
-        for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
-            if not best or face.height > best.height:
-                best = face
-            cvRectangle(self.frame, CvPoint(face.x, face.y), CvPoint(face.x+face.width, face.y+face.height), CV_RGB(255, 0, 0), 3, 8, 0)
+        for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(100, 100)):
+            conservative = CvRect(face.x+40, face.y+40, face.width-80, face.height-80)
 
-        if best:
-            cvRectangle(self.frame, CvPoint(best.x, best.y), CvPoint(best.x+best.width, best.y+best.height), CV_RGB(0, 255, 0), 3, 8, 0)
+            if not self.face_candidate or conservative.height > self.face_candidate.height:
+                self.face_candidate = conservative
 
-    def state_find_face(self):
-        best = None
+            cvRectangle(self.frame,
+                        CvPoint(conservative.x,                    conservative.y),
+                        CvPoint(conservative.x+conservative.width, conservative.y+conservative.height),
+                        CV_RGB(255, 0, 0), 3, 8, 0)
 
-        for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(30, 30)):
-            if not best or face.height > best.height:
-                best = face
+        if self.face_candidate:
+            cvRectangle(self.frame, CvPoint(self.face_candidate.x, self.face_candidate.y), CvPoint(self.face_candidate.x+self.face_candidate.width, self.face_candidate.y+self.face_candidate.height), CV_RGB(0, 255, 0), 3, 8, 0)
 
-        if best:
-            for image in [self.gray, self.eigs, self.temp]:
-                cvSetImageROI(image, best)
+    def state_mark_face(self):
+        if not self.face_candidate:
+            return
 
-            self.features = [x for x in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 20, 0.02, 4.0, use_harris=False)]
-            min_x, max_x  = 1000, 0
-            for f in self.features:
-                f.x, f.y = f.x + best.x, f.y + best.y
-                min_x, max_x = min(min_x, f.x), max(max_x, f.x)
+        for image in [self.gray, self.eigs, self.temp]:
+            cvSetImageROI(image, self.face_candidate)
 
-            for image in [self.gray, self.eigs, self.temp]:
-                cvResetImageROI(image)
+        self.features = [x for x in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.1, 4.0, use_harris=False)]
+        min_x, max_x  = 1000, 0
+        for f in self.features:
+            f.x, f.y = f.x + self.face_candidate.x, f.y + self.face_candidate.y
+            min_x, max_x = min(min_x, f.x), max(max_x, f.x)
 
-            anglePerPixel = (3.14159 / 4.5) / 480.0
-            angle         = best.width * anglePerPixel
+        print "found features:", len(self.features)
 
-            self.distance = (0.12/2.0) / tan(angle/2.0)
-            self.x        = (320 - (best.x + (best.width  / 2.0))) / 160.0 * self.distance
-            self.y        = (240 - (best.y + (best.height / 2.0))) / 120.0 * self.distance
-            self.spread   = max_x - min_x
-            self.flags    = 0
-            self.state    = 'track_face'
+        for image in [self.gray, self.eigs, self.temp]:
+            cvResetImageROI(image)
+
+        anglePerPixel = (3.14159 / 4.5) / 480.0
+        angle         = (self.face_candidate.width + 80) * anglePerPixel
+
+        self.distance = (0.12/2.0) / tan(angle/2.0)
+        self.x        = (320 - (self.face_candidate.x + (self.face_candidate.width  / 2.0))) / 160.0 * self.distance
+        self.y        = (240 - (self.face_candidate.y + (self.face_candidate.height / 2.0))) / 120.0 * self.distance
+        self.spread   = max_x - min_x
+        self.flags    = 0
+        self.state    = 'track_face'
 
     def state_track_face(self):
         features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(50, 50), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), self.flags)
@@ -236,8 +241,8 @@ class FaceTracking:
         self.flags     = CV_LKFLOW_PYR_A_READY
         self.spread    = spread
 
-        if len(self.features) < 5:
-            self.state = 'find_face'
+        if len(self.features) < 20:
+            self.state = 'mark_face'
 
     def main(self):
         glutMainLoop()
