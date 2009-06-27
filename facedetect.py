@@ -125,9 +125,9 @@ class FaceTracking:
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 640, 480, 0, GL_BGR, GL_UNSIGNED_BYTE, self.frame.data_as_string());
             glBegin(GL_POLYGON);
             glTexCoord2f(1.0, 0.0); glVertex2f(  0.0,   0.0)
-            glTexCoord2f(0.0, 0.0); glVertex2f(320.0,   0.0)
-            glTexCoord2f(0.0, 1.0); glVertex2f(320.0, 240.0)
-            glTexCoord2f(1.0, 1.0); glVertex2f(  0.0, 240.0)
+            glTexCoord2f(0.0, 0.0); glVertex2f(640.0,   0.0)
+            glTexCoord2f(0.0, 1.0); glVertex2f(640.0, 480.0)
+            glTexCoord2f(1.0, 1.0); glVertex2f(  0.0, 480.0)
             glEnd();
             glBindTexture(GL_TEXTURE_2D, 0)
 
