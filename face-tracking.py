@@ -23,6 +23,7 @@ class FaceTracking:
 
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glShadeModel(GL_SMOOTH)
+        glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_TEXTURE_2D)
         glutReshapeFunc(self.on_reshape)
