@@ -48,8 +48,20 @@ class FaceTracking:
 
     def init_tracker(self):
         self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 4) for y in range(0, 4)]
-        self.state  = 'find_checkerboard'
-        self.posit  = cvCreatePOSITObject(self.points)
+        self.state  = 'calibrate'
+
+        self.chess_mat = cvCreateMat(8*16, 3, CV_32FC1)
+        for n in range(0, 8):
+            for i in range(0, 16):
+                self.chess_mat[(n*16)+i,0] = self.points[i].x
+                self.chess_mat[(n*16)+i,1] = self.points[i].y
+                self.chess_mat[(n*16)+i,2] = self.points[i].z
+
+        self.image_mat  = cvCreateMat(8*16, 2, CV_32FC1)
+        self.counts     = cvCreateMat(8,    1, CV_32SC1)
+        self.intrinsic  = cvCreateMat(3,    3, CV_32FC1)
+        self.distortion = cvCreateMat(1,    4, CV_32FC1)
+        self.n          = 0
 
     def init_scene(self):
         glNewList(self.scene, GL_COMPILE)
@@ -92,21 +104,44 @@ class FaceTracking:
     def on_idle(self):
         self.frame = cvQueryFrame(self.capture)
 
-        if self.state == 'find_checkerboard':
-            self.state_find_checkerboard()
+        if self.state == 'calibrate':
+            self.state_calibrate()
+        elif self.state == 'delay':
+            self.state_delay()
+        elif self.state == 'crunch':
+            self.state_crunch()
 
         glutPostRedisplay()
 
-    def state_find_checkerboard(self):
+    def state_calibrate(self):
         found, corners = cvFindChessboardCorners(self.frame, CvSize(4, 4), flags=CV_CALIB_CB_NORMALIZE_IMAGE)
         cvDrawChessboardCorners(self.frame, CvSize(4, 4), corners, found)
+
         if found:
-            corners = as_c_array([CvPoint2D32f(c.x, c.y) for c in corners], elem_ctype=CvPoint2D32f)
-            rot     = as_c_array([0.0]*9, elem_ctype=ctypes.c_float)
-            trans   = as_c_array([0.0]*3, elem_ctype=ctypes.c_float)
-            cvPOSIT(self.posit, corners, 100.0, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 200, 0.01), rot, trans)
-            print [rot[i] for i in range(0, 9)]
-            print [trans[i] for i in range(0, 3)]
+            for i in range(0, 16):
+                self.image_mat[(self.n*16)+i,0] = corners[i].x
+                self.image_mat[(self.n*16)+i,1] = corners[i].y
+                self.counts[self.n,0]           = len(corners)
+
+            self.n           = self.n + 1
+
+            if self.n == 8:
+                self.state = 'crunch'
+            else:
+                self.skip_frames = 30
+                self.state       = 'delay'
+
+    def state_delay(self):
+        if self.skip_frames == 0:
+            self.state = 'calibrate'
+        else:
+            self.skip_frames = self.skip_frames - 1
+
+    def state_crunch(self):
+        cvCalibrateCamera2(self.chess_mat, self.image_mat, self.counts, CvSize(640, 480), self.intrinsic, self.distortion, flags=0)
+
+        print [self.instrinsic[x,y] for x in range(0, 3) for y in range(0, 3)]
+        print [self.distortion[i]   for i in range(0, 4)]
 
     def main(self):
         glutMainLoop()
