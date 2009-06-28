@@ -206,8 +206,6 @@ class FaceTracking:
             f.x, f.y = f.x + best.x, f.y + best.y
             min_x, max_x = min(min_x, f.x), max(max_x, f.x)
 
-        print "found features:", len(self.features)
-
         for image in [self.gray, self.eigs, self.temp]:
             cvResetImageROI(image)
 

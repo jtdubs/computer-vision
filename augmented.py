@@ -44,14 +44,15 @@ class FaceTracking:
     def init_cv(self):
         self.capture = cvCaptureFromCAM(0)
         self.frame   = cvQueryFrame(self.capture)
+        self.gray    = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
 
     def init_tracker(self):
-        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 4) for y in range(0, 4)]
+        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 3) for y in range(0, 4)]
         self.state  = 'track'
         self.found  = False
 
-        self.chess_mat          = cvCreateMat(16, 3, CV_32FC1)
-        self.image_mat          = cvCreateMat(16, 2, CV_32FC1)
+        self.chess_mat          = cvCreateMat(12, 3, CV_32FC1)
+        self.image_mat          = cvCreateMat(12, 2, CV_32FC1)
         self.intrinsic          = cvCreateMat(3, 3, CV_32FC1)
         self.distortion         = cvCreateMat(1, 4, CV_32FC1)
         self.rotation           = cvCreateMat(1, 3, CV_32FC1)
@@ -59,14 +60,14 @@ class FaceTracking:
         self.gl_rotation_matrix = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
         self.translation        = cvCreateMat(1, 3, CV_32FC1)
 
-        for i in range(0, 16):
+        for i in range(0, 12):
             self.chess_mat[i,0] = self.points[i].x
             self.chess_mat[i,1] = self.points[i].y
             self.chess_mat[i,2] = self.points[i].z
 
-        # from calibration.py
-        ci = [676.8870849609375, 0.0, 314.10885620117188, 0.0, 633.50262451171875, 231.69841003417969, 0.0, 0.0, 1.0]
-        cd = [0.21350723505020142, -0.54285913705825806, 0.012419521808624268, -0.0054184645414352417]
+        # from output of calibration.py
+        ci = [682.80694580078125, 0.0, 331.3616943359375, 0.0, 631.85980224609375, 210.08140563964844, 0.0, 0.0, 1.0]
+        cd = [0.34955242276191711, -0.70636618137359619, -0.013230122625827789, 0.0091487327590584755]
 
         for x in range(0, 3):
             for y in range(0, 3):
@@ -115,10 +116,11 @@ class FaceTracking:
             glLoadIdentity()
             glTranslatef(-self.translation[0,0], -self.translation[0,1], -self.translation[0,2])
             glMultMatrixf(self.gl_rotation_matrix)
+            glRotatef(-90.0, 1.0, 0.0, 0.0)
 
             glFrontFace(GL_CW)
             glColor3f(1.0, 1.0, 1.0)
-            glutSolidTeapot(1.0)
+            glutWireTeapot(2.0)
             glFrontFace(GL_CCW)
 
             glMatrixMode(GL_PROJECTION)
@@ -136,17 +138,20 @@ class FaceTracking:
     def on_idle(self):
         self.frame = cvQueryFrame(self.capture)
 
+        cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
+        cvEqualizeHist(self.gray, self.gray)
+
         if self.state == 'track':
             self.state_track()
 
         glutPostRedisplay()
 
     def state_track(self):
-        self.found, corners = cvFindChessboardCorners(self.frame, CvSize(4, 4), flags=CV_CALIB_CB_NORMALIZE_IMAGE)
-        cvDrawChessboardCorners(self.frame, CvSize(4, 4), corners, self.found)
+        self.found, corners = cvFindChessboardCorners(self.gray, CvSize(4, 3), flags=CV_CALIB_CB_ADAPTIVE_THRESH)
+        cvDrawChessboardCorners(self.frame, CvSize(4, 3), corners, self.found)
 
         if self.found:
-            for i in range(0, 16):
+            for i in range(0, 12):
                 self.image_mat[i,0] = corners[i].x
                 self.image_mat[i,1] = corners[i].y
 

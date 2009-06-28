@@ -44,19 +44,20 @@ class FaceTracking:
     def init_cv(self):
         self.capture = cvCaptureFromCAM(0)
         self.frame   = cvQueryFrame(self.capture)
+        self.gray    = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
 
     def init_tracker(self):
-        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 4) for y in range(0, 4)]
+        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 3) for y in range(0, 4)]
         self.state  = 'calibrate'
 
-        self.chess_mat = cvCreateMat(8*16, 3, CV_32FC1)
+        self.chess_mat = cvCreateMat(8*12, 3, CV_32FC1)
         for n in range(0, 8):
-            for i in range(0, 16):
-                self.chess_mat[(n*16)+i,0] = self.points[i].x
-                self.chess_mat[(n*16)+i,1] = self.points[i].y
-                self.chess_mat[(n*16)+i,2] = self.points[i].z
+            for i in range(0, 12):
+                self.chess_mat[(n*12)+i,0] = self.points[i].x
+                self.chess_mat[(n*12)+i,1] = self.points[i].y
+                self.chess_mat[(n*12)+i,2] = self.points[i].z
 
-        self.image_mat  = cvCreateMat(8*16, 2, CV_32FC1)
+        self.image_mat  = cvCreateMat(8*12, 2, CV_32FC1)
         self.counts     = cvCreateMat(8,    1, CV_32SC1)
         self.intrinsic  = cvCreateMat(3,    3, CV_32FC1)
         self.distortion = cvCreateMat(1,    4, CV_32FC1)
@@ -96,6 +97,9 @@ class FaceTracking:
     def on_idle(self):
         self.frame = cvQueryFrame(self.capture)
 
+        cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
+        cvEqualizeHist(self.gray, self.gray)
+
         if self.state == 'calibrate':
             self.state_calibrate()
         elif self.state == 'delay':
@@ -106,13 +110,15 @@ class FaceTracking:
         glutPostRedisplay()
 
     def state_calibrate(self):
-        found, corners = cvFindChessboardCorners(self.frame, CvSize(4, 4), flags=CV_CALIB_CB_NORMALIZE_IMAGE)
-        cvDrawChessboardCorners(self.frame, CvSize(4, 4), corners, found)
+        found, corners = cvFindChessboardCorners(self.gray, CvSize(4, 3), flags=CV_CALIB_CB_ADAPTIVE_THRESH)
+        cvDrawChessboardCorners(self.frame, CvSize(4, 3), corners, found)
 
         if found:
-            for i in range(0, 16):
-                self.image_mat[(self.n*16)+i,0] = corners[i].x
-                self.image_mat[(self.n*16)+i,1] = corners[i].y
+            corners = cvFindCornerSubPix(self.gray, corners, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 20, 0.01))
+
+            for i in range(0, 12):
+                self.image_mat[(self.n*12)+i,0] = corners[i].x
+                self.image_mat[(self.n*12)+i,1] = corners[i].y
                 self.counts[self.n,0]           = len(corners)
 
             self.n = self.n + 1
@@ -132,9 +138,9 @@ class FaceTracking:
     def state_display(self):
         cvCalibrateCamera2(self.chess_mat, self.image_mat, self.counts, CvSize(640, 480), self.intrinsic, self.distortion, flags=0)
 
-        print "instrinsic:", [self.intrinsic[x,y]  for x in range(0, 3) for y in range(0, 3)]
-        print "distortion:", [self.distortion[0,i] for i in range(0, 4)]
-        self.state = 'noop'
+        print "instrinsic =", [self.intrinsic[x,y]  for x in range(0, 3) for y in range(0, 3)]
+        print "distortion =", [self.distortion[0,i] for i in range(0, 4)]
+        sys.exit(0)
 
     def main(self):
         glutMainLoop()
