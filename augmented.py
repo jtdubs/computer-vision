@@ -32,7 +32,7 @@ class FaceTracking:
 
         glLightfv(GL_LIGHT1, GL_AMBIENT,  [0.5, 0.5, 0.5, 1.0])
         glLightfv(GL_LIGHT1, GL_DIFFUSE,  [1.0, 1.0, 1.0, 1.0])
-        glLightfv(GL_LIGHT1, GL_POSITION, [-5.0, 3.0, -5.0, 1.0])
+        glLightfv(GL_LIGHT1, GL_POSITION, [5.0, 3.0, -5.0, 1.0])
         glEnable(GL_LIGHT1)
         glEnable(GL_LIGHTING)
 
@@ -127,7 +127,8 @@ class FaceTracking:
             glTranslatef(-self.translation[0,0], -self.translation[0,1], -self.translation[0,2])
             glMultMatrixf(self.gl_rotation_matrix)
             glRotatef(-90.0, 1.0, 0.0, 0.0)
-            glTranslatef(-1.5, 1.5, -1.5)
+            glRotatef(-90.0,  0.0, 1.0, 0.0)
+            glTranslatef(-1.5, 1.5, 0.5)
 
             glFrontFace(GL_CW)
             glColor3f(1.0, 1.0, 1.0)
