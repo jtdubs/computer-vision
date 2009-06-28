@@ -42,28 +42,13 @@ class FaceTracking:
         self.scene = glGenLists(1)
 
     def init_cv(self):
-        self.capture = cvCaptureFromCAM(0)
-        self.frame   = cvQueryFrame(self.capture)
-        self.gray    = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
-
-    def init_tracker(self):
-        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 3) for y in range(0, 4)]
-        self.state  = 'track'
-        self.found  = False
-
-        self.chess_mat          = cvCreateMat(12, 3, CV_32FC1)
-        self.image_mat          = cvCreateMat(12, 2, CV_32FC1)
-        self.intrinsic          = cvCreateMat(3, 3, CV_32FC1)
-        self.distortion         = cvCreateMat(1, 4, CV_32FC1)
-        self.rotation           = cvCreateMat(1, 3, CV_32FC1)
-        self.rotation_matrix    = cvCreateMat(3, 3, CV_32FC1)
-        self.gl_rotation_matrix = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
-        self.translation        = cvCreateMat(1, 3, CV_32FC1)
-
-        for i in range(0, 12):
-            self.chess_mat[i,0] = self.points[i].x
-            self.chess_mat[i,1] = self.points[i].y
-            self.chess_mat[i,2] = self.points[i].z
+        self.capture    = cvCaptureFromCAM(0)
+        self.frame      = cvQueryFrame(self.capture)
+        self.gray       = cvCreateImage(cvSize(self.frame.width, self.frame.height),  8, 1)
+        self.mapx       = cvCreateImage(cvSize(self.frame.width, self.frame.height), 32, 1)
+        self.mapy       = cvCreateImage(cvSize(self.frame.width, self.frame.height), 32, 1)
+        self.intrinsic  = cvCreateMat(3, 3, CV_32FC1)
+        self.distortion = cvCreateMat(1, 4, CV_32FC1)
 
         # from output of calibration.py
         ci = [682.80694580078125, 0.0, 331.3616943359375, 0.0, 631.85980224609375, 210.08140563964844, 0.0, 0.0, 1.0]
@@ -75,6 +60,25 @@ class FaceTracking:
 
         for x in range(0, 4):
             self.distortion[0, x] = cd[x]
+
+        cvInitUndistortMap(self.intrinsic, self.distortion, self.mapx, self.mapy)
+
+    def init_tracker(self):
+        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 3) for y in range(0, 4)]
+        self.state  = 'track'
+        self.found  = False
+
+        self.chess_mat          = cvCreateMat(12, 3, CV_32FC1)
+        self.image_mat          = cvCreateMat(12, 2, CV_32FC1)
+        self.rotation           = cvCreateMat(1, 3, CV_32FC1)
+        self.rotation_matrix    = cvCreateMat(3, 3, CV_32FC1)
+        self.gl_rotation_matrix = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        self.translation        = cvCreateMat(1, 3, CV_32FC1)
+
+        for i in range(0, 12):
+            self.chess_mat[i,0] = self.points[i].x
+            self.chess_mat[i,1] = self.points[i].y
+            self.chess_mat[i,2] = self.points[i].z
 
     def on_reshape(self, w, h):
         w, h = 640, 480
