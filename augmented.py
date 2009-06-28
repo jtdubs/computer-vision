@@ -107,7 +107,7 @@ class FaceTracking:
         glEnd();
         glBindTexture(GL_TEXTURE_2D, 0)
 
-        if self.found:
+        if self.found or not self.found: # always draw teapot for now
             glClear(GL_DEPTH_BUFFER_BIT)
 
             glMatrixMode(GL_PROJECTION)
