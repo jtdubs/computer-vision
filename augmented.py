@@ -30,6 +30,12 @@ class FaceTracking:
         glutKeyboardFunc(self.on_key)
         glutIdleFunc(self.on_idle)
 
+        glLightfv(GL_LIGHT1, GL_AMBIENT,  [0.5, 0.5, 0.5, 1.0])
+        glLightfv(GL_LIGHT1, GL_DIFFUSE,  [1.0, 1.0, 1.0, 1.0])
+        glLightfv(GL_LIGHT1, GL_POSITION, [-5.0, 3.0, -5.0, 1.0])
+        glEnable(GL_LIGHT1)
+        glEnable(GL_LIGHTING)
+
         self.frame_texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.frame_texture);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
@@ -125,7 +131,7 @@ class FaceTracking:
 
             glFrontFace(GL_CW)
             glColor3f(1.0, 1.0, 1.0)
-            glutWireTeapot(2.0)
+            glutSolidTeapot(2.0)
             glFrontFace(GL_CCW)
 
             glMatrixMode(GL_PROJECTION)
