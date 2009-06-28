@@ -108,8 +108,8 @@ class FaceTracking:
             self.state_calibrate()
         elif self.state == 'delay':
             self.state_delay()
-        elif self.state == 'crunch':
-            self.state_crunch()
+        elif self.state == 'display':
+            self.state_display()
 
         glutPostRedisplay()
 
@@ -123,10 +123,10 @@ class FaceTracking:
                 self.image_mat[(self.n*16)+i,1] = corners[i].y
                 self.counts[self.n,0]           = len(corners)
 
-            self.n           = self.n + 1
+            self.n = self.n + 1
 
             if self.n == 8:
-                self.state = 'crunch'
+                self.state = 'display'
             else:
                 self.skip_frames = 30
                 self.state       = 'delay'
@@ -137,11 +137,12 @@ class FaceTracking:
         else:
             self.skip_frames = self.skip_frames - 1
 
-    def state_crunch(self):
+    def state_display(self):
         cvCalibrateCamera2(self.chess_mat, self.image_mat, self.counts, CvSize(640, 480), self.intrinsic, self.distortion, flags=0)
 
-        print [self.instrinsic[x,y] for x in range(0, 3) for y in range(0, 3)]
-        print [self.distortion[i]   for i in range(0, 4)]
+        print "instrinsic:", [self.intrinsic[x,y]  for x in range(0, 3) for y in range(0, 3)]
+        print "distortion:", [self.distortion[0,i] for i in range(0, 4)]
+        self.state = 'noop'
 
     def main(self):
         glutMainLoop()
