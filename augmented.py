@@ -117,6 +117,7 @@ class FaceTracking:
             glTranslatef(-self.translation[0,0], -self.translation[0,1], -self.translation[0,2])
             glMultMatrixf(self.gl_rotation_matrix)
             glRotatef(-90.0, 1.0, 0.0, 0.0)
+            glTranslatef(-1.5, 1.5, -1.5)
 
             glFrontFace(GL_CW)
             glColor3f(1.0, 1.0, 1.0)
