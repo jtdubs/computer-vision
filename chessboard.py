@@ -7,6 +7,7 @@ from opencv      import *
 from math        import *
 from random      import *
 import sys
+import ctypes
 
 class FaceTracking:
     def __init__(self):
@@ -44,11 +45,11 @@ class FaceTracking:
     def init_cv(self):
         self.capture = cvCaptureFromCAM(0)
         self.frame   = cvQueryFrame(self.capture)
-        self.gray    = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
-        self.prev    = cvCreateImage(cvSize(self.frame.width, self.frame.height), 8, 1)
 
     def init_tracker(self):
+        points = [CvPoint3D32f(x, y, 0) for x in range(0, 4) for y in range(0, 4)]
         self.state = 'find_checkerboard'
+        self.posit = cvCreatePOSITObject(points)
 
     def init_scene(self):
         glNewList(self.scene, GL_COMPILE)
@@ -91,21 +92,21 @@ class FaceTracking:
     def on_idle(self):
         self.frame = cvQueryFrame(self.capture)
 
-        cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
-        cvEqualizeHist(self.gray, self.gray)
-
         if self.state == 'find_checkerboard':
             self.state_find_checkerboard()
-
-        cvCopy(self.gray, self.prev)
 
         glutPostRedisplay()
 
     def state_find_checkerboard(self):
-        corners = cvFindChessboardCorners(self.gray, CvSize(8, 8), 0)
-        print "found corners:", len(corners)
-        for corner in corners:
-            cvCircle(self.frame, cvPoint(int(corner.x), int(corner.y)), 3, CV_RGB(0, 0, 255), 1)
+        found, corners = cvFindChessboardCorners(self.frame, CvSize(4, 4), flags=CV_CALIB_CB_NORMALIZE_IMAGE)
+        cvDrawChessboardCorners(self.frame, CvSize(4, 4), corners, found)
+        if found:
+            corners = as_c_array([CvPoint2D32f(c.x, c.y) for c in corners], elem_ctype=CvPoint2D32f)
+            rot     = as_c_array([0.0]*9, elem_ctype=ctypes.c_float)
+            trans   = as_c_array([0.0]*3, elem_ctype=ctypes.c_float)
+            cvPOSIT(self.posit, corners, 100.0, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 200, 0.01), rot, trans)
+            print [rot[i] for i in range(0, 9)]
+            print [trans[i] for i in range(0, 3)]
 
     def main(self):
         glutMainLoop()
