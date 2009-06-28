@@ -200,7 +200,9 @@ class FaceTracking:
         for image in [self.gray, self.eigs, self.temp]:
             cvSetImageROI(image, best)
 
-        self.features = [x for x in cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.05, 6.0, use_harris=False)]
+        features = cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.05, 6.0, use_harris=False)
+        cvFindCornerSubPix(self.gray, features, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.01))
+        self.features = [x for x in features]
         min_x, max_x  = 1000, 0
         for f in self.features:
             f.x, f.y = f.x + best.x, f.y + best.y
