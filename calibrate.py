@@ -14,7 +14,6 @@ class FaceTracking:
         self.init_glut()
         self.init_cv()
         self.init_tracker()
-        self.init_scene()
 
     def init_glut(self):
         glutInit(sys.argv)
@@ -62,13 +61,6 @@ class FaceTracking:
         self.intrinsic  = cvCreateMat(3,    3, CV_32FC1)
         self.distortion = cvCreateMat(1,    4, CV_32FC1)
         self.n          = 0
-
-    def init_scene(self):
-        glNewList(self.scene, GL_COMPILE)
-        glFrontFace(GL_CW)
-        glutSolidTeapot(1.0)
-        glFrontFace(GL_CCW)
-        glEndList()
 
     def on_reshape(self, w, h):
         glViewport(0, 0, w, h)

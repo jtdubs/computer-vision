@@ -14,7 +14,6 @@ class FaceTracking:
         self.init_glut()
         self.init_cv()
         self.init_tracker()
-        self.init_scene()
 
     def init_glut(self):
         glutInit(sys.argv)
@@ -49,13 +48,16 @@ class FaceTracking:
     def init_tracker(self):
         self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 4) for y in range(0, 4)]
         self.state  = 'track'
+        self.found  = False
 
-        self.chess_mat   = cvCreateMat(16, 3, CV_32FC1)
-        self.image_mat   = cvCreateMat(16, 2, CV_32FC1)
-        self.intrinsic   = cvCreateMat(3, 3, CV_32FC1)
-        self.distortion  = cvCreateMat(1, 4, CV_32FC1)
-        self.rotation    = cvCreateMat(1, 3, CV_32FC1)
-        self.translation = cvCreateMat(1, 3, CV_32FC1)
+        self.chess_mat          = cvCreateMat(16, 3, CV_32FC1)
+        self.image_mat          = cvCreateMat(16, 2, CV_32FC1)
+        self.intrinsic          = cvCreateMat(3, 3, CV_32FC1)
+        self.distortion         = cvCreateMat(1, 4, CV_32FC1)
+        self.rotation           = cvCreateMat(1, 3, CV_32FC1)
+        self.rotation_matrix    = cvCreateMat(3, 3, CV_32FC1)
+        self.gl_rotation_matrix = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        self.translation        = cvCreateMat(1, 3, CV_32FC1)
 
         for i in range(0, 16):
             self.chess_mat[i,0] = self.points[i].x
@@ -72,13 +74,6 @@ class FaceTracking:
 
         for x in range(0, 4):
             self.distortion[0, x] = cd[x]
-
-    def init_scene(self):
-        glNewList(self.scene, GL_COMPILE)
-        glFrontFace(GL_CW)
-        glutSolidTeapot(1.0)
-        glFrontFace(GL_CCW)
-        glEndList()
 
     def on_reshape(self, w, h):
         glViewport(0, 0, w, h)
@@ -105,15 +100,28 @@ class FaceTracking:
         glEnd();
         glBindTexture(GL_TEXTURE_2D, 0)
 
-        glMatrixMode(GL_PROJECTION)
-        glPushMatrix()
-        glLoadIdentity()
-        gluPerspective(45.0, w/float(h), 0.1, 100.0)
+        if self.found:
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            gluPerspective(45.0, self.width/float(self.height), 0.1, 100.0)
 
-        glMatrixMode(GL_MODELVIEW)
-        glPushMatrix()
-        glLoadIdentity()
-        glTranslate3f(self.translation[0,0], self.translation[0,1], -self.translation[0,2])
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            glLoadIdentity()
+            glTranslatef(-self.translation[0,0], -self.translation[0,1], -self.translation[0,2])
+            glMultMatrixf(self.gl_rotation_matrix)
+
+            glFrontFace(GL_CW)
+            glColor3f(1.0, 1.0, 1.0)
+            glutSolidTeapot(1.0)
+            glFrontFace(GL_CCW)
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
 
         glutSwapBuffers()
 
@@ -130,18 +138,19 @@ class FaceTracking:
         glutPostRedisplay()
 
     def state_track(self):
-        found, corners = cvFindChessboardCorners(self.frame, CvSize(4, 4), flags=CV_CALIB_CB_NORMALIZE_IMAGE)
-        cvDrawChessboardCorners(self.frame, CvSize(4, 4), corners, found)
+        self.found, corners = cvFindChessboardCorners(self.frame, CvSize(4, 4), flags=CV_CALIB_CB_NORMALIZE_IMAGE)
+        cvDrawChessboardCorners(self.frame, CvSize(4, 4), corners, self.found)
 
-        if found:
+        if self.found:
             for i in range(0, 16):
                 self.image_mat[i,0] = corners[i].x
                 self.image_mat[i,1] = corners[i].y
 
             cvFindExtrinsicCameraParams2(self.chess_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
-
-            print "rotation:",    [self.rotation[0,i]    for i in range(0, 3)]
-            print "translation:", [self.translation[0,i] for i in range(0, 3)]
+            cvRodrigues2(self.rotation, self.rotation_matrix)
+            for x in range(0,3):
+                for y in range(0,3):
+                    self.gl_rotation_matrix[(y*4)+x] = self.rotation_matrix[x,y]
 
     def main(self):
         glutMainLoop()
