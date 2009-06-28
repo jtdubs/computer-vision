@@ -76,6 +76,8 @@ class FaceTracking:
             self.distortion[0, x] = cd[x]
 
     def on_reshape(self, w, h):
+        w, h = 640, 480
+
         glViewport(0, 0, w, h)
         self.width  = w
         self.height = h
@@ -101,6 +103,8 @@ class FaceTracking:
         glBindTexture(GL_TEXTURE_2D, 0)
 
         if self.found:
+            glClear(GL_DEPTH_BUFFER_BIT)
+
             glMatrixMode(GL_PROJECTION)
             glPushMatrix()
             glLoadIdentity()
