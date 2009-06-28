@@ -87,7 +87,7 @@ class FaceTracking:
             self.chess_mat[i,2] = self.points[i].z
 
     def on_reshape(self, w, h):
-        w, h = 640, 480
+        w, h = 1280, 960
 
         glViewport(0, 0, w, h)
         self.width  = w
@@ -106,10 +106,10 @@ class FaceTracking:
         glBindTexture(GL_TEXTURE_2D, self.frame_texture)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 640, 480, 0, GL_BGR, GL_UNSIGNED_BYTE, self.frame.data_as_string());
         glBegin(GL_POLYGON);
-        glTexCoord2f(1.0, 0.0); glVertex2f(  0.0,   0.0)
-        glTexCoord2f(0.0, 0.0); glVertex2f(640.0,   0.0)
-        glTexCoord2f(0.0, 1.0); glVertex2f(640.0, 480.0)
-        glTexCoord2f(1.0, 1.0); glVertex2f(  0.0, 480.0)
+        glTexCoord2f(1.0, 0.0); glVertex2f(       0.0,         0.0)
+        glTexCoord2f(0.0, 0.0); glVertex2f(self.width,         0.0)
+        glTexCoord2f(0.0, 1.0); glVertex2f(self.width, self.height)
+        glTexCoord2f(1.0, 1.0); glVertex2f(       0.0, self.height)
         glEnd();
         glBindTexture(GL_TEXTURE_2D, 0)
 
@@ -127,7 +127,7 @@ class FaceTracking:
             glTranslatef(-self.translation[0,0], -self.translation[0,1], -self.translation[0,2])
             glMultMatrixf(self.gl_rotation_matrix)
             glRotatef(-90.0, 1.0, 0.0, 0.0)
-            glRotatef(-90.0,  0.0, 1.0, 0.0)
+            glRotatef(-90.0, 0.0, 1.0, 0.0)
             glTranslatef(-1.5, 1.5, 0.5)
 
             glFrontFace(GL_CW)
