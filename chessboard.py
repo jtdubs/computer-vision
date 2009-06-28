@@ -47,9 +47,9 @@ class FaceTracking:
         self.frame   = cvQueryFrame(self.capture)
 
     def init_tracker(self):
-        points = [CvPoint3D32f(x, y, 0) for x in range(0, 4) for y in range(0, 4)]
-        self.state = 'find_checkerboard'
-        self.posit = cvCreatePOSITObject(points)
+        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 4) for y in range(0, 4)]
+        self.state  = 'find_checkerboard'
+        self.posit  = cvCreatePOSITObject(self.points)
 
     def init_scene(self):
         glNewList(self.scene, GL_COMPILE)
