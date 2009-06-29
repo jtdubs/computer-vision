@@ -204,10 +204,10 @@ class FaceTracking:
         features = cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.05, 6.0, use_harris=False)
         cvFindCornerSubPix(self.gray, features, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.01))
         self.features = [x for x in features]
-        min_x, max_x  = 1000, 0
+        min_y, max_y  = 1000, 0
         for f in self.features:
             f.x, f.y = f.x + best.x, f.y + best.y
-            min_x, max_x = min(min_x, f.x), max(max_x, f.x)
+            min_y, max_y = min(min_y, f.y), max(max_y, f.y)
 
         for image in [self.gray, self.eigs, self.temp]:
             cvResetImageROI(image)
@@ -218,38 +218,47 @@ class FaceTracking:
         self.distance = (0.12/2.0) / tan(angle/2.0)
         self.x        = (320 - (best.x + (best.width  / 2.0))) / 160.0 * self.distance
         self.y        = (240 - (best.y + (best.height / 2.0))) / 120.0 * self.distance
-        self.spread   = max_x - min_x
+        self.spread   = max_y - min_y
         self.flags    = 0
         self.state    = 'track_face'
 
     def state_track_face(self):
         features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(50, 50), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), self.flags)
         features = [x for x in features]
-        dx, dy, min_x, max_x, = 0, 0, 1000, 0
+        n, dx, dy, min_y, max_y = 0, 0, 0, 1000, 0
         for i in range(0, len(features)):
             if ord(status[i]) == 0:
                 features[i] = None
             else:
+                n = n + 1
                 dx = dx + (self.features[i].x - features[i].x)
                 dy = dy + (self.features[i].y - features[i].y)
-                min_x, max_x = min(min_x, features[i].x), max(max_x, features[i].x)
+                min_y, max_y = min(min_y, features[i].y), max(max_y, features[i].y)
                 cvCircle(self.frame, cvPoint(int(features[i].x), int(features[i].y)), 3, CV_RGB(0, 0, 255), 1)
 
-        features = [x for x in features if x]
-        if len(features) > 0:
-            dx, dy = dx / len(features), dy / len(features)
+        avg_dx, avg_dy = dx / n, dy / n
 
-        spread = max_x - min_x
+        for i in range(0, len(features)):
+            if features[i] is not None:
+                dx = (self.features[i].x - features[i].x)
+                dy = (self.features[i].y - features[i].y)
+                if abs(avg_dx - dx) > 10 or abs(avg_dy - dy) > 10:
+                    features[i] = None
+
+        features = [x for x in features if x]
+
+        if len(features) < 20:
+            self.state = 'mark_face'
+            return
+
+        spread = max_y - min_y
 
         self.features = features
         self.distance  = self.distance * (self.spread / spread)
-        self.x         = self.x + (dx / 160.0 * self.distance)
-        self.y         = self.y + (dy / 120.0 * self.distance)
+        self.x         = self.x + (avg_dx / 160.0 * self.distance)
+        self.y         = self.y + (avg_dy / 120.0 * self.distance)
         self.flags     = CV_LKFLOW_PYR_A_READY
         self.spread    = spread
-
-        if len(self.features) < 20:
-            self.state = 'mark_face'
 
     def main(self):
         glutMainLoop()
