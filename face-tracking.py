@@ -57,7 +57,7 @@ class FaceTracking:
 
     def init_tracker(self):
         self.state = 'choose_face'
-        self.flags, self.x, self.y, self.distance = 0, 0, 0, 8
+        self.x, self.y, self.distance = 0, 0, 8
         self.show_frame = False
 
     def init_scene(self):
@@ -141,42 +141,30 @@ class FaceTracking:
         glutSwapBuffers()
 
     def on_key(self, k, *args):
-        if k in ['q', chr(27)]:
-            sys.exit(0)
-        elif k in ['m', chr(10), chr(13)]:
-            self.state = 'mark_face'
-        elif k in ['c']:
-            self.state = 'choose_face'
-        elif k in ['s']:
-            self.init_scene()
-        elif k in ['f']:
-            self.show_frame = not self.show_frame
+        if   k in ['q', chr(27)]:          sys.exit(0)
+        elif k in ['m', chr(10), chr(13)]: self.state = 'mark_face'
+        elif k in ['c']:                   self.state = 'choose_face'
+        elif k in ['s']:                   self.init_scene()
+        elif k in ['f']:                   self.show_frame = not self.show_frame
 
     def on_idle(self):
         self.frame = cvQueryFrame(self.capture)
 
         cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
         cvEqualizeHist(self.gray, self.gray)
-        cvClearMemStorage(self.storage)
 
-        if self.state == 'choose_face':
-            self.state_choose_face()
-        elif self.state == 'mark_face':
-            self.state_mark_face()
-        elif self.state == 'track_face':
-            self.state_track_face()
+        if   self.state == 'choose_face': self.state_choose_face()
+        elif self.state == 'mark_face':   self.state_mark_face()
+        elif self.state == 'track_face':  self.state_track_face()
 
         cvCopy(self.gray, self.prev)
-        self.pyr_a, self.pyr_b = self.pyr_b, self.pyr_a
-
         glutPostRedisplay()
 
     def state_choose_face(self):
         best = None
-
+        cvClearMemStorage(self.storage)
         for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(100, 100)):
             conservative = CvRect(face.x+30, face.y+30, face.width-60, face.height-60)
-
             if not best or conservative.height > best.height:
                 best = conservative
 
@@ -190,6 +178,7 @@ class FaceTracking:
 
     def state_mark_face(self):
         best = None
+        cvClearMemStorage(self.storage)
         for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(100, 100)):
             conservative = CvRect(face.x+30, face.y+30, face.width-60, face.height-60)
             if not best or conservative.height > best.height:
@@ -215,9 +204,6 @@ class FaceTracking:
         for image in [self.gray, self.eigs, self.temp]:
             cvResetImageROI(image)
 
-        anglePerPixel = (3.14159 / 4.5) / 480.0
-        angle         = (best.width + 60) * anglePerPixel
-
         self.start_avg_x    = avg_x
         self.start_avg_y    = avg_y
         self.start_x        = self.x        = 0
@@ -228,23 +214,22 @@ class FaceTracking:
         self.state          = 'track_face'
 
     def state_track_face(self):
+        self.pyr_a, self.pyr_b = self.pyr_b, self.pyr_a
         features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(50, 50), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), self.flags)
         features = [x for x in features]
 
-        n, avg_x, avg_y, min_y, max_y = 0, 0, 0, 1000, 0
+        avg_x, avg_y, min_y, max_y = 0, 0, 1000, 0
         for i in range(0, len(features)):
             if ord(status[i]) == 0:
                 features[i] = None
             else:
-                n  = n + 1
                 avg_x, avg_y = avg_x + features[i].x,     avg_y + features[i].y
                 min_y, max_y = min(min_y, features[i].y), max(max_y, features[i].y)
                 cvCircle(self.frame, cvPoint(int(features[i].x), int(features[i].y)), 3, CV_RGB(0, 0, 255), 1)
 
-        avg_x, avg_y = avg_x / n, avg_y / n
-
-        features = [x for x in features if x]
-        spread   = max_y - min_y
+        features     = [x for x in features if x]
+        avg_x, avg_y = avg_x / len(features), avg_y / len(features)
+        spread       = max_y - min_y
 
         if len(features) < 20:
             self.state = 'mark_face'
