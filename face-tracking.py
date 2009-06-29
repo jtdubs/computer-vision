@@ -57,7 +57,7 @@ class FaceTracking:
 
     def init_tracker(self):
         self.state = 'choose_face'
-        self.flags, self.x, self.y, self.spread, self.distance = 0, 0, 0, 0, 1
+        self.flags, self.x, self.y, self.distance = 0, 0, 0, 1
         self.show_frame = False
 
     def init_scene(self):
@@ -223,7 +223,7 @@ class FaceTracking:
         self.start_avg_y    = avg_y
         self.start_x        = self.x        = (320 - (best.x + (best.width  / 2.0))) / 160.0 * self.distance
         self.start_y        = self.y        = (240 - (best.y + (best.height / 2.0))) / 120.0 * self.distance
-        self.start_spread   = self.spread   = max_y - min_y
+        self.start_spread   = max_y - min_y
         self.flags          = 0
         self.state          = 'track_face'
 
@@ -256,11 +256,10 @@ class FaceTracking:
             return
 
         self.features = features
-        self.x         = self.start_x + ((self.start_avg_x - avg_x) / 160.0 * self.distance)
-        self.y         = self.start_y + ((self.start_avg_y - avg_y) / 120.0 * self.distance)
-        self.distance  = self.start_distance * ((self.start_spread / spread) ** 2)
-        self.flags     = CV_LKFLOW_PYR_A_READY
-        self.spread    = spread
+        self.x        = self.start_x + ((self.start_avg_x - avg_x) / 160.0 * self.distance)
+        self.y        = self.start_y + ((self.start_avg_y - avg_y) / 120.0 * self.distance)
+        self.distance = self.start_distance * ((self.start_spread / spread) ** 2)
+        self.flags    = CV_LKFLOW_PYR_A_READY
 
     def main(self):
         glutMainLoop()
