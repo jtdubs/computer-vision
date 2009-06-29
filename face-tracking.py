@@ -215,10 +215,10 @@ class FaceTracking:
         anglePerPixel = (3.14159 / 4.5) / 480.0
         angle         = (best.width + 60) * anglePerPixel
 
-        self.distance = (0.12/2.0) / tan(angle/2.0)
-        self.x        = (320 - (best.x + (best.width  / 2.0))) / 160.0 * self.distance
-        self.y        = (240 - (best.y + (best.height / 2.0))) / 120.0 * self.distance
-        self.spread   = max_y - min_y
+        self.start_distance = self.distance = (0.12/2.0) / tan(angle/2.0)
+        self.start_x        = self.x        = (320 - (best.x + (best.width  / 2.0))) / 160.0 * self.distance
+        self.start_y        = self.y        = (240 - (best.y + (best.height / 2.0))) / 120.0 * self.distance
+        self.start_spread   = self.spread   = max_y - min_y
         self.flags    = 0
         self.state    = 'track_face'
 
@@ -246,15 +246,14 @@ class FaceTracking:
                     features[i] = None
 
         features = [x for x in features if x]
+        spread   = max_y - min_y
 
-        if len(features) < 20:
+        if len(features) < 20 or spread < 20:
             self.state = 'mark_face'
             return
 
-        spread = max_y - min_y
-
         self.features = features
-        self.distance  = self.distance * ((self.spread / spread) ** 1.5)
+        self.distance  = self.start_distance * ((self.start_spread / spread) ** 2)
         self.x         = self.x + (avg_dx / 160.0 * self.distance)
         self.y         = self.y + (avg_dy / 120.0 * self.distance)
         self.flags     = CV_LKFLOW_PYR_A_READY
