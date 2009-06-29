@@ -88,6 +88,7 @@ class FaceTracking:
         glBegin(GL_QUADS)
         for (x, y, z, r, g, b) in targets:
             glColor3f(r, g, b); glVertex3f(0.5+x, 0.5+y, z); glVertex3f(-0.5+x, 0.5+y, z); glVertex3f(-0.5+x, -0.5+y, z); glVertex3f(0.5+x, -0.5+y, z)
+            glColor3f(r*0.7, g*0.7, b*0.7); glVertex3f(0.6+x, 0.6+y, z-0.01); glVertex3f(-0.6+x, 0.6+y, z-0.01); glVertex3f(-0.6+x, -0.6+y, z-0.01); glVertex3f(0.6+x, -0.6+y, z-0.01)
         glEnd()
 
         glEndList()
