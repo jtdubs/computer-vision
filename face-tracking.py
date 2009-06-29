@@ -108,8 +108,7 @@ class FaceTracking:
     def on_display(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
-        glTranslatef(0.0, 0.0, -4.0)
-        gluLookAt(self.x, self.y, abs(self.distance*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        gluLookAt(self.x, self.y, abs(self.distance*4)+1, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         glCallList(self.scene);
 
         if self.show_frame:
@@ -218,12 +217,12 @@ class FaceTracking:
         anglePerPixel = (3.14159 / 4.5) / 480.0
         angle         = (best.width + 60) * anglePerPixel
 
-        self.start_distance = self.distance = (0.12/2.0) / tan(angle/2.0)
         self.start_avg_x    = avg_x
         self.start_avg_y    = avg_y
-        self.start_x        = self.x        = (320 - (best.x + (best.width  / 2.0))) / 160.0 * self.distance
-        self.start_y        = self.y        = (240 - (best.y + (best.height / 2.0))) / 120.0 * self.distance
+        self.start_x        = self.x        = 0
+        self.start_y        = self.y        = 0
         self.start_spread   = max_y - min_y
+        self.distance       = 1.0
         self.flags          = 0
         self.state          = 'track_face'
 
@@ -258,7 +257,7 @@ class FaceTracking:
         self.features = features
         self.x        = self.start_x + ((self.start_avg_x - avg_x) / 160.0 * self.distance)
         self.y        = self.start_y + ((self.start_avg_y - avg_y) / 120.0 * self.distance)
-        self.distance = self.start_distance * ((self.start_spread / spread) ** 2)
+        self.distance = (self.start_spread / spread) ** 2
         self.flags    = CV_LKFLOW_PYR_A_READY
 
     def main(self):
