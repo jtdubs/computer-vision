@@ -242,15 +242,10 @@ class FaceTracking:
 
         avg_x, avg_y = avg_x / n, avg_y / n
 
-        for i in range(0, len(features)):
-            if features[i] is not None:
-                if abs(avg_x - features[i].x) > self.start_spread or abs(avg_y - features[i].y) > self.start_spread:
-                    features[i] = None
-
         features = [x for x in features if x]
         spread   = max_y - min_y
 
-        if len(features) < 20 or spread < 20:
+        if len(features) < 20:
             self.state = 'mark_face'
             return
 
