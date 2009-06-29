@@ -62,27 +62,27 @@ class FaceTracking:
 
     def init_scene(self):
         def generate_target():
-            x, y, z = uniform(-7.5, 7.5), uniform(-4.5, 4.5), uniform(-15, 5)
-            return (x, y, z, (z+15.0)/15.0, 0, 0)
-        targets = [generate_target() for x in range(0, 40)]
+            x, y, z = uniform(-7.5, 7.5), uniform(-4.5, 4.5), uniform(-20, 0)
+            return (x, y, z, (z+20.0)/20.0, 0, 0)
+        targets = [generate_target() for x in range(0, 50)]
 
         glNewList(self.scene, GL_COMPILE)
 
         glBegin(GL_LINES)
-        for z in range(-15, 1):
-            glColor3f(1.0+(z/10.0), 1.0+(z/15.0), 1.0+(z/15.0))
+        for z in range(-20, 1):
+            glColor3f(1.0+(z/20.0), 1.0+(z/20.0), 1.0+(z/20.0))
             glVertex3f(-8, -5, z); glVertex3f(-8,  5, z)
             glVertex3f(-8, -5, z); glVertex3f( 8, -5, z)
             glVertex3f( 8,  5, z); glVertex3f(-8,  5, z)
             glVertex3f( 8,  5, z); glVertex3f( 8, -5, z)
         for x in range(-8, 9):
-            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, -5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x, -5, -15)
-            glColor3f(1.0, 1.0, 1.0); glVertex3f(x,  5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x,  5, -15)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, -5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x, -5, -20)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(x,  5, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(x,  5, -20)
         for y in range(-5, 6):
-            glColor3f(1.0, 1.0, 1.0); glVertex3f(-8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(-8, y, -15)
-            glColor3f(1.0, 1.0, 1.0); glVertex3f( 8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f( 8, y, -15)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(-8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f(-8, y, -20)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f( 8, y, 0); glColor3f(0.0, 0.0, 0.0); glVertex3f( 8, y, -20)
         for (x, y, z, r, g, b) in targets:
-            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, y, z-0.02); glColor3f(0.0, 0.0, 0.0); glVertex3f(x, y, -15)
+            glColor3f(1.0, 1.0, 1.0); glVertex3f(x, y, z-0.02); glColor3f(0.0, 0.0, 0.0); glVertex3f(x, y, -20)
         glEnd()
 
         glBegin(GL_QUADS)
@@ -108,7 +108,7 @@ class FaceTracking:
     def on_display(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
-        glTranslatef(-self.x*2, -self.y*2, -(self.distance*4+1))
+        glTranslatef(-self.x*2, -self.y*2, -(self.distance*4))
         glCallList(self.scene);
 
         if self.show_frame:
