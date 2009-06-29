@@ -108,7 +108,7 @@ class FaceTracking:
     def on_display(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
-        gluLookAt(self.x, self.y, abs(self.distance*4)+1, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        glTranslatef(-self.x*2, -self.y*2, -(self.distance*4+1))
         glCallList(self.scene);
 
         if self.show_frame:
