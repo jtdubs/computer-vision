@@ -108,7 +108,7 @@ class FaceTracking:
     def on_display(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
-        glTranslatef(0.0, 0.0, -5.0)
+        glTranslatef(0.0, 0.0, -4.0)
         gluLookAt(self.x, self.y, abs(self.distance*6), 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         glCallList(self.scene);
 
@@ -254,7 +254,7 @@ class FaceTracking:
         spread = max_y - min_y
 
         self.features = features
-        self.distance  = self.distance * (self.spread / spread)
+        self.distance  = self.distance * ((self.spread / spread) ** 1.5)
         self.x         = self.x + (avg_dx / 160.0 * self.distance)
         self.y         = self.y + (avg_dy / 120.0 * self.distance)
         self.flags     = CV_LKFLOW_PYR_A_READY
