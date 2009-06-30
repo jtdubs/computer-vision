@@ -215,7 +215,7 @@ class FaceTracking:
 
     def state_track_face(self):
         self.pyr_a, self.pyr_b = self.pyr_b, self.pyr_a
-        features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(50, 50), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), self.flags)
+        features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(30, 30), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), self.flags)
         features = [x for x in features]
 
         avg_x, avg_y, min_y, max_y = 0, 0, 1000, 0
