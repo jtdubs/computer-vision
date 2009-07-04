@@ -45,14 +45,11 @@ def main():
         seq     = cvFindNextContour(scanner)
         while seq:
             contour = pointee(cast(pointer(seq), CvContour_p))
-            if (contour.rect.width*contour.rect.height) >= 100:
-
+            if contour.flags & CV_SEQ_FLAG_HOLE and (contour.rect.width*contour.rect.height) >= 100:
                 cvClearMemStorage(storage2)
                 tmp = cvApproxPoly(contour, sizeof(CvContour), storage2, CV_POLY_APPROX_DP, 7)
                 if tmp.total == 4 and cvCheckContourConvexity(tmp):
                     cvDrawContours(frame, seq, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 1, 8)
-                # else:
-                #     cvDrawContours(frame, seq, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
 
             seq = cvFindNextContour(scanner)
         del scanner
