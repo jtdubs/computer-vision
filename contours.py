@@ -14,6 +14,7 @@ def main():
     gray      = cvCreateImage(size, 8,  1)
     threshold = cvCreateImage(size, 8, 1)
     storage   = cvCreateMemStorage(0)
+    storage2  = cvCreateMemStorage(0)
 
     cvNamedWindow('gray', 1)
     cvNamedWindow('threshold', 1)
@@ -45,7 +46,14 @@ def main():
         while seq:
             contour = pointee(cast(pointer(seq), CvContour_p))
             if (contour.rect.width*contour.rect.height) >= 100:
-                cvDrawContours(frame, seq, CV_RGB(0,255,0), CV_RGB(255,0,0), 0, 1, 8)
+
+                cvClearMemStorage(storage2)
+                tmp = cvApproxPoly(contour, sizeof(CvContour), storage2, CV_POLY_APPROX_DP, 7)
+                if tmp.total == 4 and cvCheckContourConvexity(tmp):
+                    cvDrawContours(frame, seq, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 1, 8)
+                # else:
+                #     cvDrawContours(frame, seq, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
+
             seq = cvFindNextContour(scanner)
         del scanner
         cvShowImage('contours', frame)
