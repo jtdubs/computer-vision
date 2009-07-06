@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from math           import *
 from ctypes         import *
 from opencv         import *
 from opencv.highgui import *
@@ -22,10 +23,23 @@ def contours(img, storage):
 def quadrangles(img, storage):
     for contour in contours(img, storage):
         if contour.flags & CV_SEQ_FLAG_HOLE and (contour.rect.width*contour.rect.height) >= 100:
-            tmp = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, 7)
-            tmp = cvApproxPoly(tmp,     sizeof(CvContour), None, CV_POLY_APPROX_DP, 7)
-            if tmp.total == 4 and cvCheckContourConvexity(tmp):
-                yield contour
+            quad = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, 7)
+            quad = cvApproxPoly(quad,    sizeof(CvContour), None, CV_POLY_APPROX_DP, 7)
+            if quad.total == 4 and cvCheckContourConvexity(quad):
+                yield quad
+
+def quad_to_points(quad):
+    return [(p.x, p.y) for p in quad.asarray(CvPoint)]
+
+def quad_angle(quad):
+    [(x1, y1), (x2, y2), (x3, y3), (x4, y4)] = quad
+    a1, a2, a3, a4 = atan2(y2-y1,x2-x1)+pi%pi,      atan2(y3-y2,x3-x2)+pi%pi,      atan2(y4-y3,x4-x3)+pi%pi,      atan2(y1-y4,x1-x4)+pi%pi
+    a1, a2, a3, a4 = (a1 if a1<=(pi/2) else a1-pi), (a2 if a2<=(pi/2) else a2-pi), (a3 if a3<=(pi/2) else a3-pi), (a4 if a4<=(pi/2) else a4-pi)
+    return min([a1, a2, a3, a4], key=abs) * 180 / pi
+
+def chessboards(quads):
+    quads = [quad_to_points(q) for q in quads]
+    return [(quad_angle(q), q) for q in quads]
 
 def main():
     global dilation, block_size, param1, should_dilate, should_equalize
@@ -52,9 +66,14 @@ def main():
             cvDilate(threshold, threshold, iterations=dilation)
         cvShowImage('threshold', threshold)
 
-        for quadrangle in quadrangles(threshold, contour_storage):
+        quads = list(quadrangles(threshold, contour_storage))
+        for quadrangle in quads:
             cvDrawContours(frame, quadrangle, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 1, 8)
         cvShowImage('contours', frame)
+
+        boards = chessboards(quads)
+        if boards:
+            print boards
 
         k = cvWaitKey(10)
         if   k == 27:       break
