@@ -164,7 +164,7 @@ class FaceTracking:
         best = None
         cvClearMemStorage(self.storage)
         for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(100, 100)):
-            conservative = CvRect(face.x+30, face.y+30, face.width-60, face.height-60)
+            conservative = CvRect(face.x+30, face.y+20, face.width-60, face.height-40)
             if not best or conservative.height > best.height:
                 best = conservative
 
@@ -180,7 +180,7 @@ class FaceTracking:
         best = None
         cvClearMemStorage(self.storage)
         for face in cvHaarDetectObjects(self.gray, self.cascade, self.storage, 1.1, 2, CV_HAAR_DO_CANNY_PRUNING, cvSize(100, 100)):
-            conservative = CvRect(face.x+30, face.y+30, face.width-60, face.height-60)
+            conservative = CvRect(face.x+30, face.y+20, face.width-60, face.height-40)
             if not best or conservative.height > best.height:
                 best = conservative
 
