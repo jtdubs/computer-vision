@@ -190,7 +190,7 @@ class FaceTracking:
         for image in [self.gray, self.eigs, self.temp]:
             cvSetImageROI(image, best)
 
-        features = cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.05, 6.0, use_harris=False)
+        features = cvGoodFeaturesToTrack(self.gray, self.eigs, self.temp, None, 100, 0.02, 6.0, use_harris=False)
         cvFindCornerSubPix(self.gray, features, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.01))
         self.features = [x for x in features]
 
@@ -215,7 +215,7 @@ class FaceTracking:
 
     def state_track_face(self):
         self.pyr_a, self.pyr_b = self.pyr_b, self.pyr_a
-        features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(30, 30), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.03), self.flags)
+        features, status = cvCalcOpticalFlowPyrLK(self.prev, self.gray, self.pyr_a, self.pyr_b, self.features, None, None, CvSize(30, 30), 3, None, None, cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 10, 0.01), self.flags)
         features = [x for x in features]
 
         avg_x, avg_y, min_y, max_y = 0, 0, 1000, 0
