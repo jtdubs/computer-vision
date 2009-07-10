@@ -21,11 +21,13 @@ def main():
     diff            = cvCreateImage(size, 8, 1)
     mask            = cvCreateImage(size, 8, 1)
     mask2           = cvCreateImage(size, 8, 1)
+    dist            = cvCreateImage(size, 32, 1)
     skin            = cvCreateImage(size, 8, 3)
 
     cvNamedWindow('frame', 1)
-    cvNamedWindow('rgb', 1)
+    cvNamedWindow('rgb',   1)
     cvNamedWindow('skin',  1)
+    cvNamedWindow('mask',  1)
 
     while True:
         frame = cvQueryFrame(capture)
@@ -43,7 +45,7 @@ def main():
         cvMerge(b, g, r, None, bgr)
         cvShowImage('rgb', bgr)
 
-        # assert rgb ranges
+        # assert rgb in range (20,40,95) - (255,255,255)
         cvInRangeS(bgr, cvScalar(20, 40, 95), cvScalar(255, 255, 255), mask)
 
         # assert max(r,g,b) - min(r,g,b) > 15
@@ -68,10 +70,19 @@ def main():
 
         # dilate mask
         cvDilate(mask, mask, None, 3)
+        # cvDistTransform(mask, dist, CV_DIST_L2, 5)
+        # cvCmpS(dist, 3.0, mask, CV_CMP_GT)
+        # cvAdaptiveThreshold(mask2, mask, 255, CV_ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY, 5)
+        # cvNot(mask, mask)
+        # cvSmooth(mask, mask2, CV_GAUSSIAN, 3)
+        # cvThreshold(mask2, mask, 255, 255, CV_THRESH_BINARY)
+        cvShowImage('mask', mask)
 
         # apply mask to frame
         cvSetZero(skin)
         cvCopy(copy, skin, mask)
+        # cvNot(mask, mask)
+        # cvSet(skin, cvScalar(255, 255, 0), mask)
         cvShowImage('skin', skin)
 
         k = cvWaitKey(10)
