@@ -20,7 +20,7 @@ def contours(img, storage):
         contour = cvFindNextContour(scanner)
     del scanner
 
-# at angles, i sometimes mistake squares for nearly-square octagons (check convexity defects to weed out)
+# at angles, i sometimes group two diagonal squares into a single figure-eight
 def quadrangles(img, storage, frame=None):
     for contour in contours(img, storage):
         hole  = contour.flags & CV_SEQ_FLAG_HOLE
@@ -30,17 +30,18 @@ def quadrangles(img, storage, frame=None):
             quad = cvApproxPoly(quad,    sizeof(CvContour), None, CV_POLY_APPROX_DP, 6)
             if cvCheckContourConvexity(quad) and quad.total == 4:
                 yield quad
-#            elif area > 2000 and quad.total == 8:
+#            elif area > 2000 and quad.total % 4 == 0:
 #                box = cvMinAreaRect2(quad)
 #                box_area  = box.size.width * box.size.height
 #                quad_area = abs(cvContourArea(quad)) * 2
 #                if quad_area > 1000:
-#                    print box_area, quad_area
+#                    # print box_area, quad_area
 #                    cvDrawContours(frame, quad, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
 #                    for p in quad.asarray(CvPoint):
 #                        cvCircle(frame, p, 3, CV_RGB(0, 0, 255), 1)
-#                    if abs(box_area - quad_area) <= (box_area / 10.0):
-#                        print quad
+#                    # if abs(box_area - quad_area) <= (box_area / 10.0):
+#                    #     print quad
+#                    return
 
 def quad_to_points(quad):
     return tuple([(p.x, p.y) for p in quad.asarray(CvPoint)])
@@ -99,7 +100,8 @@ def main():
     capture         = cvCaptureFromCAM(0)
     frame           = cvQueryFrame(capture)
     size            = cvSize(frame.width, frame.height)
-    gray            = cvCreateImage(size, 8,  1)
+    copy            = cvCreateImage(size, 8, 3)
+    gray            = cvCreateImage(size, 8, 1)
     threshold       = cvCreateImage(size, 8, 1)
     contour_storage = cvCreateMemStorage(0)
 
@@ -108,8 +110,9 @@ def main():
 
     while True:
         frame = cvQueryFrame(capture)
+        cvFlip(frame, copy, 1)
 
-        cvCvtColor(frame, gray, CV_BGR2GRAY)
+        cvCvtColor(copy, gray, CV_BGR2GRAY)
         if should_equalize:
             cvEqualizeHist(gray, gray)
 
@@ -118,17 +121,17 @@ def main():
             cvDilate(threshold, threshold, iterations=dilation)
         cvShowImage('threshold', threshold)
 
-        quads = list(quadrangles(threshold, contour_storage, frame=frame))
+        quads = list(quadrangles(threshold, contour_storage, frame=copy))
         for quadrangle in quads:
-            cvDrawContours(frame, quadrangle, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 1, 8)
+            cvDrawContours(copy, quadrangle, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 1, 8)
 
         # intensities = [255, 128, 64]
         # colors      = [CV_RGB(x,y,z) for x in intensities for y in intensities for z in intensities]
         # for color, quads in zip(colors, quad_groups(quads)):
         #     for (_, _, _, points) in quads:
-        #         cvPolyLine(frame, [[CvPoint(x,y) for (x,y) in list(points)]], True, color, 2, 8)
+        #         cvPolyLine(copy, [[CvPoint(x,y) for (x,y) in list(points)]], True, color, 2, 8)
 
-        cvShowImage('contours', frame)
+        cvShowImage('contours', copy)
 
         k = cvWaitKey(10)
         if   k == 27:       break
