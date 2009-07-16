@@ -26,14 +26,21 @@ def quadrangles(img, storage, frame=None):
         hole  = contour.flags & CV_SEQ_FLAG_HOLE
         area  = contour.rect.width * contour.rect.height
         if hole and area >= 225:
-            quad = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, 7)
-            quad = cvApproxPoly(quad,    sizeof(CvContour), None, CV_POLY_APPROX_DP, 7)
-            if cvCheckContourConvexity(quad):
-                if quad.total == 4:
-                    yield quad
-            elif area > 2000 and quad.total == 8:
-                cvDrawContours(frame, quad, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
-                print quad
+            quad = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, 6)
+            quad = cvApproxPoly(quad,    sizeof(CvContour), None, CV_POLY_APPROX_DP, 6)
+            if cvCheckContourConvexity(quad) and quad.total == 4:
+                yield quad
+#            elif area > 2000 and quad.total == 8:
+#                box = cvMinAreaRect2(quad)
+#                box_area  = box.size.width * box.size.height
+#                quad_area = abs(cvContourArea(quad)) * 2
+#                if quad_area > 1000:
+#                    print box_area, quad_area
+#                    cvDrawContours(frame, quad, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
+#                    for p in quad.asarray(CvPoint):
+#                        cvCircle(frame, p, 3, CV_RGB(0, 0, 255), 1)
+#                    if abs(box_area - quad_area) <= (box_area / 10.0):
+#                        print quad
 
 def quad_to_points(quad):
     return tuple([(p.x, p.y) for p in quad.asarray(CvPoint)])
