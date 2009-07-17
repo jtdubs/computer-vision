@@ -24,18 +24,18 @@ def polys(contours):
 def decals(polys):
     for decal in polys:
         if decal.total == 4:
-            inside_count = 0
-            for marker in polys:
-                if pointer(marker) <> pointer(decal):
+            inner_polys = []
+            for inner_poly in polys:
+                if pointer(inner_poly) <> pointer(decal):
                     inside = True
-                    for pt in marker.asarray(CvPoint):
+                    for pt in inner_poly.asarray(CvPoint):
                         pt = CvPoint2D32f(pt.x, pt.y)
                         if cvPointPolygonTest(decal, pt, 0) <= 0:
                             inside = False
                     if inside:
-                        inside_count = inside_count + 1
-            if inside_count == 1:
-                yield decal
+                        inner_polys.append(inner_poly)
+            if len(inner_polys) == 1:
+                yield (decal, inner_polys[0].total)
 
 def main():
     capture         = cvCaptureFromCAM(0)
@@ -61,8 +61,11 @@ def main():
         ps = list(polys(contours(edges, contour_storage)))
         # for poly in ps:
         #     cvDrawContours(copy, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 2, 8)
-        for decal in decals(ps):
-            cvDrawContours(copy, decal, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 2, 8)
+        for (decal, n) in decals(ps):
+            if n == 3:
+                cvDrawContours(copy, decal, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 2, 8)
+            elif n == 4:
+                cvDrawContours(copy, decal, CV_RGB(0,0,255), CV_RGB(0,0,255), 0, 2, 8)
 
         cvShowImage('contours', copy)
 
