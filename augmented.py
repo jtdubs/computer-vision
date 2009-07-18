@@ -56,7 +56,6 @@ class AugmentedReality:
         self.intrinsic  = cvCreateMat(3, 3, CV_32FC1)
         self.distortion = cvCreateMat(1, 4, CV_32FC1)
 
-        # from output of calibration.py
         ci = [600, 0, 320, 0, 600, 240, 0, 0, 1]
         cd = [0, 0, 0, 0]
 
@@ -161,10 +160,6 @@ class AugmentedReality:
 
             cvFindExtrinsicCameraParams2(self.decal_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
             cvRodrigues2(self.rotation, self.rotation_matrix)
-
-            # self.adjust_src[0,0], self.adjust_src[0,1], self.adjust_src[0,2] = 0.5, 0.5, 0.5
-            # cvMatMul(self.adjust_src, self.rotation_matrix, self.adjust_dst)
-            # cvAdd(self.translation, self.adjust_dst, self.translation)
 
             modelview = [0.0] * 16
             for x in range(0, 3):
