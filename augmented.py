@@ -107,9 +107,7 @@ class AugmentedReality:
         glEnd();
         glBindTexture(GL_TEXTURE_2D, 0)
 
-        for ((tx, ty, tz), rotation) in self.decals:
-            print "DECAL:", (tx,ty,tz), rotation
-
+        for modelview in self.decals:
             glClear(GL_DEPTH_BUFFER_BIT)
 
             glMatrixMode(GL_PROJECTION)
@@ -120,9 +118,9 @@ class AugmentedReality:
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
             glLoadIdentity()
-            glTranslatef(tx, -ty, -tz)
-            glMultMatrixf(rotation)
-            glTranslatef(0.0, 0.0, 0.5)
+            glScalef(1.0, -1.0, -1.0)
+            glMultMatrixf(modelview)
+            glTranslatef(0.5, 0.5, 0.5)
 
             glColor3f(1.0, 1.0, 1.0)
             glutSolidCube(1.0)
@@ -164,18 +162,20 @@ class AugmentedReality:
             cvFindExtrinsicCameraParams2(self.decal_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
             cvRodrigues2(self.rotation, self.rotation_matrix)
 
-            self.adjust_src[0,0], self.adjust_src[0,1], self.adjust_src[0,2] = 0.5, 0.5, 0.0
-            cvMatMul(self.adjust_src, self.rotation_matrix, self.adjust_dst)
-            cvAdd(self.translation, self.adjust_dst, self.translation)
+            # self.adjust_src[0,0], self.adjust_src[0,1], self.adjust_src[0,2] = 0.5, 0.5, 0.5
+            # cvMatMul(self.adjust_src, self.rotation_matrix, self.adjust_dst)
+            # cvAdd(self.translation, self.adjust_dst, self.translation)
 
-            translation = (self.translation[0,0], self.translation[0,1], self.translation[0,2])
-
-            gl_rotation_matrix = ([0.0] * 15) + [1.0]
+            modelview = [0.0] * 16
             for x in range(0, 3):
                 for y in range(0, 3):
-                    gl_rotation_matrix[(y*4)+x] = self.rotation_matrix[x,y]
+                    modelview[(y*4)+x] = self.rotation_matrix[x,y]
+            modelview[12] = self.translation[0,0];
+            modelview[13] = self.translation[0,1];
+            modelview[14] = self.translation[0,2];
+            modelview[15] = 1.0;
 
-            self.decals.append((translation, gl_rotation_matrix))
+            self.decals.append(modelview)
 
         glutPostRedisplay()
 
