@@ -6,10 +6,10 @@ from OpenGL.GL   import *
 from opencv      import *
 from math        import *
 from random      import *
+from ctypes      import *
 import sys
-import ctypes
 
-class FaceTracking:
+class AugmentedReality:
     def __init__(self):
         self.init_glut()
         self.init_cv()
@@ -19,7 +19,7 @@ class FaceTracking:
         glutInit(sys.argv)
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
         glutInitWindowSize(640, 480)
-        glutCreateWindow('Face Tracking')
+        glutCreateWindow('Augmented Reality')
 
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glShadeModel(GL_SMOOTH)
@@ -45,14 +45,14 @@ class FaceTracking:
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP)
         glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 
-        self.scene = glGenLists(1)
-
     def init_cv(self):
         self.capture    = cvCaptureFromCAM(0)
         self.frame      = cvQueryFrame(self.capture)
-        self.gray       = cvCreateImage(cvSize(self.frame.width, self.frame.height),  8, 1)
-        self.mapx       = cvCreateImage(cvSize(self.frame.width, self.frame.height), 32, 1)
-        self.mapy       = cvCreateImage(cvSize(self.frame.width, self.frame.height), 32, 1)
+        size            = cvSize(self.frame.width, self.frame.height)
+        self.copy       = cvCreateImage(size, 8, 3)
+        self.gray       = cvCreateImage(size, 8, 1)
+        self.edges      = cvCreateImage(size, 8, 1)
+        self.storage    = cvCreateMemStorage(0)
         self.intrinsic  = cvCreateMat(3, 3, CV_32FC1)
         self.distortion = cvCreateMat(1, 4, CV_32FC1)
 
@@ -67,27 +67,21 @@ class FaceTracking:
         for x in range(0, 4):
             self.distortion[0, x] = cd[x]
 
-        cvInitUndistortMap(self.intrinsic, self.distortion, self.mapx, self.mapy)
-
     def init_tracker(self):
-        self.points = [CvPoint3D32f(x, y, 0) for x in range(0, 3) for y in range(0, 4)]
-        self.state  = 'track'
-        self.found  = False
+        self.decal_mat       = cvCreateMat(4, 3, CV_32FC1)
+        self.image_mat       = cvCreateMat(4, 2, CV_32FC1)
+        self.rotation        = cvCreateMat(1, 3, CV_32FC1)
+        self.rotation_matrix = cvCreateMat(3, 3, CV_32FC1)
+        self.translation     = cvCreateMat(1, 3, CV_32FC1)
+        self.adjust_src      = cvCreateMat(1, 3, CV_32FC1)
+        self.adjust_dst      = cvCreateMat(1, 3, CV_32FC1)
+        self.decals          = []
 
-        self.chess_mat          = cvCreateMat(12, 3, CV_32FC1)
-        self.image_mat          = cvCreateMat(12, 2, CV_32FC1)
-        self.rotation           = cvCreateMat(1, 3, CV_32FC1)
-        self.rotation_matrix    = cvCreateMat(3, 3, CV_32FC1)
-        self.gl_rotation_matrix = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
-        self.translation        = cvCreateMat(1, 3, CV_32FC1)
-
-        for i in range(0, 12):
-            self.chess_mat[i,0] = self.points[i].x
-            self.chess_mat[i,1] = self.points[i].y
-            self.chess_mat[i,2] = self.points[i].z
+        for i, (x, y) in enumerate([(0, 0), (0, 1), (1, 1), (1, 0)]):
+            self.decal_mat[i,0], self.decal_mat[i,1], self.decal_mat[i,2] = x, y, 0
 
     def on_reshape(self, w, h):
-        w, h = 1280, 960
+        w, h = 640, 480
 
         glViewport(0, 0, w, h)
         self.width  = w
@@ -104,7 +98,7 @@ class FaceTracking:
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         glBindTexture(GL_TEXTURE_2D, self.frame_texture)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 640, 480, 0, GL_BGR, GL_UNSIGNED_BYTE, self.frame.data_as_string());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 640, 480, 0, GL_BGR, GL_UNSIGNED_BYTE, self.copy.data_as_string());
         glBegin(GL_POLYGON);
         glTexCoord2f(1.0, 0.0); glVertex2f(       0.0,         0.0)
         glTexCoord2f(0.0, 0.0); glVertex2f(self.width,         0.0)
@@ -113,7 +107,9 @@ class FaceTracking:
         glEnd();
         glBindTexture(GL_TEXTURE_2D, 0)
 
-        if self.found or not self.found: # always draw teapot for now
+        for ((tx, ty, tz), rotation) in self.decals:
+            print "DECAL:", (tx,ty,tz), rotation
+
             glClear(GL_DEPTH_BUFFER_BIT)
 
             glMatrixMode(GL_PROJECTION)
@@ -124,16 +120,16 @@ class FaceTracking:
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
             glLoadIdentity()
-            glTranslatef(-self.translation[0,0], -self.translation[0,1], -self.translation[0,2])
-            glMultMatrixf(self.gl_rotation_matrix)
-            glRotatef(-90.0, 1.0, 0.0, 0.0)
-            glRotatef(-90.0, 0.0, 1.0, 0.0)
-            glTranslatef(-1.5, 1.5, 0.5)
+            glTranslatef(-tx, -ty, -tz)
+            glMultMatrixf(rotation)
+            glTranslatef(0.0, 0.0, -1.0)
+            # glRotatef(-90.0, 1.0, 0.0, 0.0)
+            # glRotatef(-90.0, 0.0, 1.0, 0.0)
+            # glTranslatef(-1.5, 0, 0.5)
 
-            glFrontFace(GL_CW)
             glColor3f(1.0, 1.0, 1.0)
-            glutSolidTeapot(2.0)
-            glFrontFace(GL_CCW)
+            # glutSolidTeapot(1.0)
+            glutSolidCube(1.0)
 
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
@@ -150,31 +146,78 @@ class FaceTracking:
     def on_idle(self):
         self.frame = cvQueryFrame(self.capture)
 
-        cvCvtColor(self.frame, self.gray, CV_BGR2GRAY)
-        cvEqualizeHist(self.gray, self.gray)
+        cvCopy(self.frame, self.copy)
+        cvCvtColor(self.copy, self.gray, CV_BGR2GRAY)
+        cvCanny(self.gray, self.edges, 805, 415, 5) # hand tuned w/ canny.py
+        cvDilate(self.edges, self.edges, iterations=1)
 
-        if self.state == 'track':
-            self.state_track()
+        self.decals = []
+
+        ps = list(polys(contours(self.edges, self.storage)))
+        # for poly in ps:
+        #     cvDrawContours(self.copy, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 2, 8)
+        for (decal, n) in decals(ps):
+            color = CV_RGB(0,255,0) if n == 3 else CV_RGB(0,0,255)
+            cvDrawContours(self.copy, decal, color, color, 0, 2, 8)
+
+            ps = [CvPoint2D32f(p.x, p.y) for p in decal.asarray(CvPoint)]
+            cvFindCornerSubPix(self.gray, ps, CvSize(2, 2), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.01))
+            for i, p in enumerate(ps):
+                self.image_mat[i,0], self.image_mat[i,1] = p.x, p.y
+
+            cvFindExtrinsicCameraParams2(self.decal_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
+            cvRodrigues2(self.rotation, self.rotation_matrix)
+
+            self.adjust_src[0,0], self.adjust_src[0,1], self.adjust_src[0,2] = 0.5, 0.5, 0.0
+            cvMatMul(self.adjust_src, self.rotation_matrix, self.adjust_dst)
+            cvAdd(self.translation, self.adjust_dst, self.translation)
+
+            translation = (self.translation[0,0], self.translation[0,1], self.translation[0,2])
+
+            gl_rotation_matrix = ([0.0] * 15) + [1.0]
+            for x in range(0, 3):
+                for y in range(0, 3):
+                    gl_rotation_matrix[(y*4)+x] = self.rotation_matrix[x,y]
+
+            self.decals.append((translation, gl_rotation_matrix))
 
         glutPostRedisplay()
-
-    def state_track(self):
-        self.found, corners = cvFindChessboardCorners(self.gray, CvSize(4, 3), flags=CV_CALIB_CB_ADAPTIVE_THRESH)
-        cvDrawChessboardCorners(self.frame, CvSize(4, 3), corners, self.found)
-
-        if self.found:
-            for i in range(0, 12):
-                self.image_mat[i,0] = corners[i].x
-                self.image_mat[i,1] = corners[i].y
-
-            cvFindExtrinsicCameraParams2(self.chess_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
-            cvRodrigues2(self.rotation, self.rotation_matrix)
-            for x in range(0,3):
-                for y in range(0,3):
-                    self.gl_rotation_matrix[(y*4)+x] = self.rotation_matrix[x,y]
 
     def main(self):
         glutMainLoop()
 
+def contours(img, storage):
+    cvClearMemStorage(storage)
+    scanner = cvStartFindContours(img, storage, mode=CV_RETR_LIST, method=CV_CHAIN_APPROX_SIMPLE)
+    contour = cvFindNextContour(scanner)
+    while contour:
+        yield pointee(cast(pointer(contour), CvContour_p))
+        contour = cvFindNextContour(scanner)
+    del scanner
+
+def polys(contours):
+    for contour in contours:
+        hole = contour.flags & CV_SEQ_FLAG_HOLE
+        if hole and (contour.rect.width*contour.rect.height) > 400:
+            poly = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, contour.rect.width/10)
+            if cvCheckContourConvexity(poly):
+                yield poly
+
+def decals(polys):
+    for decal in polys:
+        if decal.total == 4:
+            inner_polys = []
+            for inner_poly in polys:
+                if pointer(inner_poly) <> pointer(decal):
+                    inside = True
+                    for pt in inner_poly.asarray(CvPoint):
+                        pt = CvPoint2D32f(pt.x, pt.y)
+                        if cvPointPolygonTest(decal, pt, 0) <= 0:
+                            inside = False
+                    if inside:
+                        inner_polys.append(inner_poly)
+            if len(inner_polys) == 1:
+                yield (decal, inner_polys[0].total)
+
 if __name__ == '__main__':
-    FaceTracking().main()
+    AugmentedReality().main()
