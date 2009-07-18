@@ -131,6 +131,8 @@ class AugmentedReality:
                 glColor3f(0.1, 1.0, 0.1)
                 glTranslatef(0.0, 0.0, 0.1)
                 glutSolidTorus(0.2, 0.5, 20, 100)
+            else:
+                print "UNKNOWN DECAL:", type
 
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
@@ -201,7 +203,7 @@ def polys(contours):
     for contour in contours:
         hole = contour.flags & CV_SEQ_FLAG_HOLE
         if hole and (contour.rect.width*contour.rect.height) > 400:
-            poly = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, contour.rect.width/10)
+            poly = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, max(contour.rect.width,contour.rect.height)/8)
             if cvCheckContourConvexity(poly):
                 yield poly
 
