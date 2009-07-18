@@ -57,8 +57,8 @@ class AugmentedReality:
         self.distortion = cvCreateMat(1, 4, CV_32FC1)
 
         # from output of calibration.py
-        ci = [682.80694580078125, 0.0, 331.3616943359375, 0.0, 631.85980224609375, 210.08140563964844, 0.0, 0.0, 1.0]
-        cd = [0.34955242276191711, -0.70636618137359619, -0.013230122625827789, 0.0091487327590584755]
+        ci = [600, 0, 320, 0, 600, 240, 0, 0, 1]
+        cd = [0, 0, 0, 0]
 
         for x in range(0, 3):
             for y in range(0, 3):
@@ -100,10 +100,10 @@ class AugmentedReality:
         glBindTexture(GL_TEXTURE_2D, self.frame_texture)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 640, 480, 0, GL_BGR, GL_UNSIGNED_BYTE, self.copy.data_as_string());
         glBegin(GL_POLYGON);
-        glTexCoord2f(1.0, 0.0); glVertex2f(       0.0,         0.0)
-        glTexCoord2f(0.0, 0.0); glVertex2f(self.width,         0.0)
-        glTexCoord2f(0.0, 1.0); glVertex2f(self.width, self.height)
-        glTexCoord2f(1.0, 1.0); glVertex2f(       0.0, self.height)
+        glTexCoord2f(0.0, 0.0); glVertex2f(       0.0,         0.0)
+        glTexCoord2f(1.0, 0.0); glVertex2f(self.width,         0.0)
+        glTexCoord2f(1.0, 1.0); glVertex2f(self.width, self.height)
+        glTexCoord2f(0.0, 1.0); glVertex2f(       0.0, self.height)
         glEnd();
         glBindTexture(GL_TEXTURE_2D, 0)
 
@@ -120,15 +120,11 @@ class AugmentedReality:
             glMatrixMode(GL_MODELVIEW)
             glPushMatrix()
             glLoadIdentity()
-            glTranslatef(-tx, -ty, -tz)
+            glTranslatef(tx, -ty, -tz)
             glMultMatrixf(rotation)
-            glTranslatef(0.0, 0.0, -1.0)
-            # glRotatef(-90.0, 1.0, 0.0, 0.0)
-            # glRotatef(-90.0, 0.0, 1.0, 0.0)
-            # glTranslatef(-1.5, 0, 0.5)
+            glTranslatef(0.0, 0.0, 0.5)
 
             glColor3f(1.0, 1.0, 1.0)
-            # glutSolidTeapot(1.0)
             glutSolidCube(1.0)
 
             glMatrixMode(GL_PROJECTION)
@@ -146,7 +142,7 @@ class AugmentedReality:
     def on_idle(self):
         self.frame = cvQueryFrame(self.capture)
 
-        cvCopy(self.frame, self.copy)
+        cvFlip(self.frame, self.copy, 1)
         cvCvtColor(self.copy, self.gray, CV_BGR2GRAY)
         cvCanny(self.gray, self.edges, 805, 415, 5) # hand tuned w/ canny.py
         cvDilate(self.edges, self.edges, iterations=1)
@@ -161,7 +157,7 @@ class AugmentedReality:
             cvDrawContours(self.copy, decal, color, color, 0, 2, 8)
 
             ps = [CvPoint2D32f(p.x, p.y) for p in decal.asarray(CvPoint)]
-            cvFindCornerSubPix(self.gray, ps, CvSize(2, 2), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.01))
+            ps = cvFindCornerSubPix(self.gray, ps, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.001))
             for i, p in enumerate(ps):
                 self.image_mat[i,0], self.image_mat[i,1] = p.x, p.y
 
