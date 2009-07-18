@@ -25,6 +25,7 @@ class AugmentedReality:
         glShadeModel(GL_SMOOTH)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_TEXTURE_2D)
+        glEnable(GL_COLOR_MATERIAL)
         glutReshapeFunc(self.on_reshape)
         glutDisplayFunc(self.on_display)
         glutKeyboardFunc(self.on_key)
@@ -106,7 +107,7 @@ class AugmentedReality:
         glEnd();
         glBindTexture(GL_TEXTURE_2D, 0)
 
-        for modelview in self.decals:
+        for modelview, type in self.decals:
             glClear(GL_DEPTH_BUFFER_BIT)
 
             glMatrixMode(GL_PROJECTION)
@@ -119,10 +120,17 @@ class AugmentedReality:
             glLoadIdentity()
             glScalef(1.0, -1.0, -1.0)
             glMultMatrixf(modelview)
-            glTranslatef(0.5, 0.5, 0.5)
+            glTranslatef(0.5, 0.5, 0.0)
 
-            glColor3f(1.0, 1.0, 1.0)
-            glutSolidCube(1.0)
+            if type == 4:
+                glColor3f(1.0, 0.1, 0.1)
+                # glTranslatef(0.0, 0.0, 0.5)
+                glutSolidCone(0.5, 1.0, 100, 20)
+                # glutSolidCube(1.0)
+            elif type == 3:
+                glColor3f(0.1, 1.0, 0.1)
+                glTranslatef(0.0, 0.0, 0.1)
+                glutSolidTorus(0.2, 0.5, 20, 100)
 
             glMatrixMode(GL_PROJECTION)
             glPopMatrix()
@@ -144,7 +152,7 @@ class AugmentedReality:
         cvCanny(self.gray, self.edges, 805, 415, 5) # hand tuned w/ canny.py
         cvDilate(self.edges, self.edges, iterations=1)
 
-        self.decals = []
+        found_decals = []
 
         ps = list(polys(contours(self.edges, self.storage)))
         # for poly in ps:
@@ -170,7 +178,10 @@ class AugmentedReality:
             modelview[14] = self.translation[0,2];
             modelview[15] = 1.0;
 
-            self.decals.append(modelview)
+            found_decals.append((modelview, n))
+
+        if len(found_decals) > 0:
+            self.decals = found_decals
 
         glutPostRedisplay()
 
