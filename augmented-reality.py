@@ -51,7 +51,7 @@ class AugmentedReality:
         self.frame      = cvQueryFrame(self.capture)
         size            = cvSize(self.frame.width, self.frame.height)
         self.copy       = cvCreateImage(size, 8, 3)
-        self.temp       = cvCreateImage(size, 8, 3)
+        self.temp       = cvCreateImage(cvSize(100, 100), 8, 3)
         self.gray       = cvCreateImage(size, 8, 1)
         self.edges      = cvCreateImage(size, 8, 1)
         self.storage    = cvCreateMemStorage(0)
@@ -124,15 +124,25 @@ class AugmentedReality:
             glMultMatrixf(modelview)
             glTranslatef(0.5, 0.5, 0.0)
 
-            if type == 4:
+            if type == 0:   # [W,W,W]
                 glColor3f(1.0, 0.1, 0.1)
-                # glTranslatef(0.0, 0.0, 0.5)
                 glutSolidCone(0.5, 1.0, 100, 20)
-                # glutSolidCube(1.0)
-            elif type == 3:
+            elif type == 4: # [W,B,W]
                 glColor3f(0.1, 1.0, 0.1)
+                glTranslatef(0.0, 0.0, 0.5)
+                glutSolidCube(1.0)
+            elif type == 21: # [B,B,B]
+                glColor3f(0.1, 0.1, 1.0)
                 glTranslatef(0.0, 0.0, 0.1)
                 glutSolidTorus(0.2, 0.5, 20, 100)
+            elif type == 63: # [R,R,R]
+                glColor3f(0.8, 0.8, 0.1)
+                glRotatef(90, 1.0, 0.0, 0.0)
+                glutSolidTeapot(1.0)
+            elif type == 53: # [R,B,B]
+                glColor3f(0.1, 0.8, 0.8)
+                glTranslatef(0.0, 0.0, 0.5)
+                glutSolidSphere(0.5, 50, 50)
             else:
                 print "UNKNOWN DECAL:", type
 
@@ -158,17 +168,17 @@ class AugmentedReality:
 
         found_decals = []
 
-        ps = list(polys(contours(self.edges, self.storage)))
-        # for poly in ps:
-        #     cvDrawContours(self.copy, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 2, 8)
-        for q, (decal, n) in enumerate(decals(ps)):
-            color = CV_RGB(0,255,0) if n == 3 else CV_RGB(0,0,255)
-            cvDrawContours(self.copy, decal, color, color, 0, 2, 8)
-
+        for i, decal in enumerate(decals(list(polys(contours(self.edges, self.storage))))):
             ps = [CvPoint2D32f(p.x, p.y) for p in decal.asarray(CvPoint)]
             ps = cvFindCornerSubPix(self.gray, ps, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.001))
-            for i, p in enumerate(ps):
-                self.image_mat[i,0], self.image_mat[i,1] = p.x, p.y
+
+            decal_value, orient = self.identify_decal(i, ps, decal)
+
+            # ps = ps[orient:] + ps[:orient] # apply orientation
+            for j, p in enumerate(ps):
+                self.image_mat[j,0], self.image_mat[j,1] = p.x, p.y
+
+            cvDrawContours(self.copy, decal, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 2, 8)
 
             cvFindExtrinsicCameraParams2(self.decal_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
             cvRodrigues2(self.rotation, self.rotation_matrix)
@@ -182,22 +192,64 @@ class AugmentedReality:
             modelview[14] = self.translation[0,2];
             modelview[15] = 1.0;
 
-            b = cvBoundingRect(decal, 0)
-            cvRectangle(self.copy, cvPoint(b.x,b.y), cvPoint(b.x+b.width, b.y+b.height), CV_RGB(255,0,255), 2, 8, 0)
-            cvSetImageROI(self.temp, cvRect(0, 0, 100, 100))
-            cvGetPerspectiveTransform(ps, as_c_array([CvPoint2D32f(0,0), CvPoint2D32f(0,100), CvPoint2D32f(100,100), CvPoint2D32f(100,0)], None, CvPoint2D32f), self.perspective)
-            cvWarpPerspective(self.copy, self.temp, self.perspective, CV_WARP_FILL_OUTLIERS)
-            cvSetImageROI(self.copy, cvRect(q*100, 0, 100, 100))
-            cvCopy(self.temp, self.copy)
-            cvResetImageROI(self.copy)
-            cvResetImageROI(self.temp)
-
-            found_decals.append((modelview, n))
+            found_decals.append((modelview, decal_value))
 
         if len(found_decals) > 0:
             self.decals = found_decals
 
         glutPostRedisplay()
+
+    def identify_decal(self, offset, ps, decal):
+        # warp decal back to a flat, 100x100 square
+        b = cvBoundingRect(decal, 0)
+        cvRectangle(self.copy, cvPoint(b.x,b.y), cvPoint(b.x+b.width, b.y+b.height), CV_RGB(255,0,255), 2, 8, 0)
+        cvGetPerspectiveTransform(ps, as_c_array([CvPoint2D32f(0,0), CvPoint2D32f(0,100), CvPoint2D32f(100,100), CvPoint2D32f(100,0)], None, CvPoint2D32f), self.perspective)
+        cvWarpPerspective(self.copy, self.temp, self.perspective, CV_WARP_FILL_OUTLIERS)
+
+        # average each of the 4 quadrants
+        c = [None] * 4
+        cvSetImageROI(self.temp, cvRect(25, 25, 25, 25)); c[0] = cvAvg(self.temp)
+        cvSetImageROI(self.temp, cvRect(50, 25, 25, 25)); c[1] = cvAvg(self.temp)
+        cvSetImageROI(self.temp, cvRect(50, 50, 25, 25)); c[2] = cvAvg(self.temp)
+        cvSetImageROI(self.temp, cvRect(25, 50, 25, 25)); c[3] = cvAvg(self.temp)
+
+        # reorient to put darkest quadrant in top-left (first position)
+        c_avg = [None] * 4
+        for i in range(0, 4):
+            c_avg[i] = (c[i].val[0] + c[i].val[1] + c[i].val[2]) / 3
+        orientation = c_avg.index(min(c_avg))
+        c = c[orientation:] + c[:orientation]
+
+        # render quadrants to self.copy for debugging purposes
+        cvSetImageROI(self.copy, cvRect(offset*100,    0,    50, 50)); cvSet(self.copy, c[0])
+        cvSetImageROI(self.copy, cvRect(offset*100+50, 0,    50, 50)); cvSet(self.copy, c[1])
+        cvSetImageROI(self.copy, cvRect(offset*100+50, 0+50, 50, 50)); cvSet(self.copy, c[2])
+        cvSetImageROI(self.copy, cvRect(offset*100,    0+50, 50, 50)); cvSet(self.copy, c[3])
+
+        # determine color of quadrants, and therefore decal value
+        decal_value = 0
+        for i in range(1, 4):
+            channels = [c[i].val[j] for j in range(0, 3)]
+            mx = max(channels)
+            mn = min(channels)
+            max_channel = channels.index(mx)
+            spread = (mx - mn) / float(mx)
+            value = (max_channel+1) if spread >= 0.4 else 0
+            decal_value = (decal_value * 4) + value
+            c[i].val[(max_channel+0)%3] = 0 if value == 0 else 255
+            c[i].val[(max_channel+1)%3] = 0
+            c[i].val[(max_channel+2)%3] = 0
+
+        # render quadrants to self.copy for debugging purposes
+        cvSetImageROI(self.copy, cvRect(offset*100,    100,    50, 50)); cvSet(self.copy, CV_RGB(0,0,0))
+        cvSetImageROI(self.copy, cvRect(offset*100+50, 100,    50, 50)); cvSet(self.copy, c[1])
+        cvSetImageROI(self.copy, cvRect(offset*100+50, 100+50, 50, 50)); cvSet(self.copy, c[2])
+        cvSetImageROI(self.copy, cvRect(offset*100,    100+50, 50, 50)); cvSet(self.copy, c[3])
+
+        cvResetImageROI(self.copy)
+        cvResetImageROI(self.temp)
+
+        return (decal_value, orientation)
 
     def main(self):
         glutMainLoop()
@@ -220,20 +272,48 @@ def polys(contours):
                 yield poly
 
 def decals(polys):
+    pointers = dict([(addressof(p), p) for p in polys])
+    decal_to_inner = { }
+    inner_to_decal = { }
+
     for decal in polys:
-        if decal.total == 4:
-            inner_polys = []
-            for inner_poly in polys:
-                if pointer(inner_poly) <> pointer(decal):
-                    inside = True
-                    for pt in inner_poly.asarray(CvPoint):
-                        pt = CvPoint2D32f(pt.x, pt.y)
-                        if cvPointPolygonTest(decal, pt, 0) <= 0:
-                            inside = False
-                    if inside:
-                        inner_polys.append(inner_poly)
-            if len(inner_polys) == 1:
-                yield (decal, inner_polys[0].total)
+        # decals must be quads
+        if decal.total <> 4:
+            continue
+
+        # find all the polys contained within this decal
+        inner_polys = []
+        for inner_poly in polys:
+            if pointer(inner_poly) <> pointer(decal):
+                inside = True
+                for pt in inner_poly.asarray(CvPoint):
+                    pt = CvPoint2D32f(pt.x, pt.y)
+                    if cvPointPolygonTest(decal, pt, 0) <= 0:
+                        inside = False
+                if inside:
+                    inner_polys.append(inner_poly)
+
+        # decals must have atleast one inner poly, but no more than five
+        if 1 <= len(inner_polys) <= 5:
+            valid_decal = True
+
+            if inner_to_decal.has_key(addressof(decal)):
+                # we are inside another decal, so the outer decal was a false positive.  delete it.
+                del decal_to_inner[inner_to_decal[addressof(decal)]]
+            else:
+                for inner in inner_polys:
+                    if decal_to_inner.has_key(addressof(inner)):
+                        # one of our inner polys is a decal, so we are a false positive.  skip ourselves.
+                        valid_decal = False
+
+            if valid_decal:
+                # valid decal found, remember it
+                decal_to_inner[addressof(decal)] = inner_polys
+                for inner in inner_polys:
+                    inner_to_decal[addressof(inner)] = addressof(decal)
+
+    # return all the decals
+    return [pointers[addr] for addr in decal_to_inner.keys()]
 
 if __name__ == '__main__':
     AugmentedReality().main()
