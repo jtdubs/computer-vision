@@ -10,7 +10,8 @@ from ctypes      import *
 import sys
 
 class DecalIdentifier:
-    def __init__(self):
+    def __init__(self, debug=True):
+        self.debug           = debug
         self.image           = None                                  # input rgb image
         self.gray            = None                                  # grayscale image
         self.edges           = None                                  # output of canny edge detection
@@ -59,11 +60,11 @@ class DecalIdentifier:
             corners = [CvPoint2D32f(p.x, p.y) for p in decal.asarray(CvPoint)]
             corners = cvFindCornerSubPix(self.gray, corners, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.001))
 
+            decal_value, decal_orientation = self._identify_decal(i, corners, decal)
+
             # ps = ps[orient:] + ps[:orient] # apply orientation
             for j, corner in enumerate(corners):
                 self.image_mat[j,0], self.image_mat[j,1] = corner.x, corner.y
-
-            decal_value, decal_orientation = self._identify_decal(i, corners, decal)
 
             # calculate rotation and translation of decal
             cvFindExtrinsicCameraParams2(self.decal_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
@@ -84,7 +85,8 @@ class DecalIdentifier:
     def _identify_decal(self, offset, corners, decal):
         # warp decal to a flat, 100x100 square
         b = cvBoundingRect(decal, 0)
-        cvRectangle(self.image, cvPoint(b.x,b.y), cvPoint(b.x+b.width, b.y+b.height), CV_RGB(255,0,255), 2, 8, 0)
+        if self.debug:
+            cvRectangle(self.image, cvPoint(b.x,b.y), cvPoint(b.x+b.width, b.y+b.height), CV_RGB(255,0,255), 2, 8, 0)
         cvGetPerspectiveTransform(corners, as_c_array([CvPoint2D32f(0,0), CvPoint2D32f(0,100), CvPoint2D32f(100,100), CvPoint2D32f(100,0)], None, CvPoint2D32f), self.perspective)
         cvWarpPerspective(self.image, self.rectified, self.perspective, CV_WARP_FILL_OUTLIERS)
 
@@ -102,11 +104,12 @@ class DecalIdentifier:
         orientation = c_avg.index(min(c_avg))
         c = c[orientation:] + c[:orientation]
 
-        # render quadrants to self.image for debugging purposes
-        cvSetImageROI(self.image, cvRect(offset*100,    0,    50, 50)); cvSet(self.image, c[0])
-        cvSetImageROI(self.image, cvRect(offset*100+50, 0,    50, 50)); cvSet(self.image, c[1])
-        cvSetImageROI(self.image, cvRect(offset*100+50, 0+50, 50, 50)); cvSet(self.image, c[2])
-        cvSetImageROI(self.image, cvRect(offset*100,    0+50, 50, 50)); cvSet(self.image, c[3])
+        if self.debug:
+            # render quadrants to self.image for debugging purposes
+            cvSetImageROI(self.image, cvRect(offset*50,    0,    25, 25)); cvSet(self.image, c[0])
+            cvSetImageROI(self.image, cvRect(offset*50+25, 0,    25, 25)); cvSet(self.image, c[1])
+            cvSetImageROI(self.image, cvRect(offset*50+25, 0+25, 25, 25)); cvSet(self.image, c[2])
+            cvSetImageROI(self.image, cvRect(offset*50,    0+25, 25, 25)); cvSet(self.image, c[3])
 
         # determine color of quadrants, and therefore decal value
         decal_value = 0
@@ -123,11 +126,12 @@ class DecalIdentifier:
             c[i].val[(max_channel+1)%3] = 0
             c[i].val[(max_channel+2)%3] = 0
 
-        # render quadrants to self.image for debugging purposes
-        cvSetImageROI(self.image, cvRect(offset*100,    100,    50, 50)); cvSet(self.image, CV_RGB(0,0,0))
-        cvSetImageROI(self.image, cvRect(offset*100+50, 100,    50, 50)); cvSet(self.image, c[1])
-        cvSetImageROI(self.image, cvRect(offset*100+50, 100+50, 50, 50)); cvSet(self.image, c[2])
-        cvSetImageROI(self.image, cvRect(offset*100,    100+50, 50, 50)); cvSet(self.image, c[3])
+        if self.debug:
+            # render quadrants to self.image for debugging purposes
+            cvSetImageROI(self.image, cvRect(offset*50,    50,    25, 25)); cvSet(self.image, CV_RGB(0,0,0))
+            cvSetImageROI(self.image, cvRect(offset*50+25, 50,    25, 25)); cvSet(self.image, c[1])
+            cvSetImageROI(self.image, cvRect(offset*50+25, 50+25, 25, 25)); cvSet(self.image, c[2])
+            cvSetImageROI(self.image, cvRect(offset*50,    50+25, 25, 25)); cvSet(self.image, c[3])
 
         cvResetImageROI(self.image)
         cvResetImageROI(self.rectified)
@@ -149,7 +153,8 @@ class DecalIdentifier:
             if hole and (contour.rect.width*contour.rect.height) > 200:
                 poly = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, max(contour.rect.width,contour.rect.height)/8)
                 # if cvCheckContourConvexity(poly):
-                cvDrawContours(self.image, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
+                if self.debug:
+                    cvDrawContours(self.image, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
                 yield poly
 
     def _find_decals(self, polys):
