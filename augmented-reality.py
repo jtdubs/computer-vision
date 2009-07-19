@@ -138,7 +138,7 @@ class AugmentedReality:
             elif type == 63: # [R,R,R]
                 glColor3f(0.8, 0.8, 0.1)
                 glRotatef(90, 1.0, 0.0, 0.0)
-                glutSolidTeapot(1.0)
+                glutSolidTeapot(0.5)
             elif type == 53: # [R,B,B]
                 glColor3f(0.1, 0.8, 0.8)
                 glTranslatef(0.0, 0.0, 0.5)
@@ -168,7 +168,7 @@ class AugmentedReality:
 
         found_decals = []
 
-        for i, decal in enumerate(decals(list(polys(contours(self.edges, self.storage))))):
+        for i, decal in enumerate(self.find_decals(list(self.find_polys(self.find_contours(self.edges, self.storage))))):
             ps = [CvPoint2D32f(p.x, p.y) for p in decal.asarray(CvPoint)]
             ps = cvFindCornerSubPix(self.gray, ps, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.001))
 
@@ -177,8 +177,6 @@ class AugmentedReality:
             # ps = ps[orient:] + ps[:orient] # apply orientation
             for j, p in enumerate(ps):
                 self.image_mat[j,0], self.image_mat[j,1] = p.x, p.y
-
-            cvDrawContours(self.copy, decal, CV_RGB(0,255,0), CV_RGB(0,255,0), 0, 2, 8)
 
             cvFindExtrinsicCameraParams2(self.decal_mat, self.image_mat, self.intrinsic, self.distortion, self.rotation, self.translation)
             cvRodrigues2(self.rotation, self.rotation_matrix)
@@ -234,7 +232,7 @@ class AugmentedReality:
             mn = min(channels)
             max_channel = channels.index(mx)
             spread = (mx - mn) / float(mx)
-            value = (max_channel+1) if spread >= 0.4 else 0
+            value = (max_channel+1) if spread >= 0.3 else 0
             decal_value = (decal_value * 4) + value
             c[i].val[(max_channel+0)%3] = 0 if value == 0 else 255
             c[i].val[(max_channel+1)%3] = 0
@@ -251,69 +249,75 @@ class AugmentedReality:
 
         return (decal_value, orientation)
 
-    def main(self):
-        glutMainLoop()
-
-def contours(img, storage):
-    cvClearMemStorage(storage)
-    scanner = cvStartFindContours(img, storage, mode=CV_RETR_LIST, method=CV_CHAIN_APPROX_SIMPLE)
-    contour = cvFindNextContour(scanner)
-    while contour:
-        yield pointee(cast(pointer(contour), CvContour_p))
+    def find_contours(self, img, storage):
+        cvClearMemStorage(storage)
+        scanner = cvStartFindContours(img, storage, mode=CV_RETR_LIST, method=CV_CHAIN_APPROX_SIMPLE)
         contour = cvFindNextContour(scanner)
-    del scanner
+        while contour:
+            yield pointee(cast(pointer(contour), CvContour_p))
+            contour = cvFindNextContour(scanner)
+        del scanner
 
-def polys(contours):
-    for contour in contours:
-        hole = contour.flags & CV_SEQ_FLAG_HOLE
-        if hole and (contour.rect.width*contour.rect.height) > 400:
-            poly = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, max(contour.rect.width,contour.rect.height)/8)
-            if cvCheckContourConvexity(poly):
+    def find_polys(self, contours):
+        for contour in contours:
+            hole = contour.flags & CV_SEQ_FLAG_HOLE
+            if hole and (contour.rect.width*contour.rect.height) > 200:
+                poly = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, max(contour.rect.width,contour.rect.height)/8)
+                # if cvCheckContourConvexity(poly):
+                cvDrawContours(self.copy, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
                 yield poly
 
-def decals(polys):
-    pointers = dict([(addressof(p), p) for p in polys])
-    decal_to_inner = { }
-    inner_to_decal = { }
+    def find_decals(self, polys):
+        pointers = dict([(addressof(p), p) for p in polys])
+        decal_to_inner = { }
+        inner_to_decal = { }
 
-    for decal in polys:
-        # decals must be quads
-        if decal.total <> 4:
-            continue
+        for decal in polys:
+            # decals must be quads
+            if decal.total <> 4:
+                continue
 
-        # find all the polys contained within this decal
-        inner_polys = []
-        for inner_poly in polys:
-            if pointer(inner_poly) <> pointer(decal):
-                inside = True
-                for pt in inner_poly.asarray(CvPoint):
-                    pt = CvPoint2D32f(pt.x, pt.y)
-                    if cvPointPolygonTest(decal, pt, 0) <= 0:
-                        inside = False
-                if inside:
-                    inner_polys.append(inner_poly)
+            # find all the polys contained within this decal
+            inner_polys = []
+            for inner_poly in polys:
+                if pointer(inner_poly) <> pointer(decal):
+                    inside = True
+                    for pt in inner_poly.asarray(CvPoint):
+                        pt = CvPoint2D32f(pt.x, pt.y)
+                        if cvPointPolygonTest(decal, pt, 0) <= 0:
+                            inside = False
+                    if inside:
+                        inner_polys.append(inner_poly)
 
-        # decals must have atleast one inner poly, but no more than five
-        if 1 <= len(inner_polys) <= 5:
-            valid_decal = True
+            # decals must have atleast one inner poly, but no more than five
+            if 1 <= len(inner_polys) <= 5:
+                valid_decal = True
 
-            if inner_to_decal.has_key(addressof(decal)):
-                # we are inside another decal, so the outer decal was a false positive.  delete it.
-                del decal_to_inner[inner_to_decal[addressof(decal)]]
+                if inner_to_decal.has_key(addressof(decal)):
+                    # we are inside another decal, so the outer decal was a false positive.  delete it.
+                    print "FOUND OUTER FIRST, DELETING IT"
+                    del decal_to_inner[inner_to_decal[addressof(decal)]]
+                else:
+                    for inner in inner_polys:
+                        if decal_to_inner.has_key(addressof(inner)):
+                            # one of our inner polys is a decal, so we are a false positive.  skip ourselves.
+                            print "FOUND INNER FIRST, IGNORE OUTER"
+                            valid_decal = False
+
+                if valid_decal:
+                    # valid decal found, remember it
+                    decal_to_inner[addressof(decal)] = inner_polys
+                    for inner in inner_polys:
+                        inner_to_decal[addressof(inner)] = addressof(decal)
             else:
-                for inner in inner_polys:
-                    if decal_to_inner.has_key(addressof(inner)):
-                        # one of our inner polys is a decal, so we are a false positive.  skip ourselves.
-                        valid_decal = False
+                print "INVALID:", len(inner_polys)
 
-            if valid_decal:
-                # valid decal found, remember it
-                decal_to_inner[addressof(decal)] = inner_polys
-                for inner in inner_polys:
-                    inner_to_decal[addressof(inner)] = addressof(decal)
+        # return all the decals
+        return [pointers[addr] for addr in decal_to_inner.keys()]
 
-    # return all the decals
-    return [pointers[addr] for addr in decal_to_inner.keys()]
+
+    def main(self):
+        glutMainLoop()
 
 if __name__ == '__main__':
     AugmentedReality().main()
