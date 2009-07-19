@@ -51,6 +51,7 @@ class AugmentedReality:
         self.frame      = cvQueryFrame(self.capture)
         size            = cvSize(self.frame.width, self.frame.height)
         self.copy       = cvCreateImage(size, 8, 3)
+        self.temp       = cvCreateImage(size, 8, 3)
         self.gray       = cvCreateImage(size, 8, 1)
         self.edges      = cvCreateImage(size, 8, 1)
         self.storage    = cvCreateMemStorage(0)
@@ -75,6 +76,7 @@ class AugmentedReality:
         self.translation     = cvCreateMat(1, 3, CV_32FC1)
         self.adjust_src      = cvCreateMat(1, 3, CV_32FC1)
         self.adjust_dst      = cvCreateMat(1, 3, CV_32FC1)
+        self.perspective     = cvCreateMat(3, 3, CV_32FC1)
         self.decals          = []
 
         for i, (x, y) in enumerate([(0, 0), (0, 1), (1, 1), (1, 0)]):
@@ -159,7 +161,7 @@ class AugmentedReality:
         ps = list(polys(contours(self.edges, self.storage)))
         # for poly in ps:
         #     cvDrawContours(self.copy, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 2, 8)
-        for (decal, n) in decals(ps):
+        for q, (decal, n) in enumerate(decals(ps)):
             color = CV_RGB(0,255,0) if n == 3 else CV_RGB(0,0,255)
             cvDrawContours(self.copy, decal, color, color, 0, 2, 8)
 
@@ -179,6 +181,16 @@ class AugmentedReality:
             modelview[13] = self.translation[0,1];
             modelview[14] = self.translation[0,2];
             modelview[15] = 1.0;
+
+            b = cvBoundingRect(decal, 0)
+            cvRectangle(self.copy, cvPoint(b.x,b.y), cvPoint(b.x+b.width, b.y+b.height), CV_RGB(255,0,255), 2, 8, 0)
+            cvSetImageROI(self.temp, cvRect(0, 0, 100, 100))
+            cvGetPerspectiveTransform(ps, as_c_array([CvPoint2D32f(0,0), CvPoint2D32f(0,100), CvPoint2D32f(100,100), CvPoint2D32f(100,0)], None, CvPoint2D32f), self.perspective)
+            cvWarpPerspective(self.copy, self.temp, self.perspective, CV_WARP_FILL_OUTLIERS)
+            cvSetImageROI(self.copy, cvRect(q*100, 0, 100, 100))
+            cvCopy(self.temp, self.copy)
+            cvResetImageROI(self.copy)
+            cvResetImageROI(self.temp)
 
             found_decals.append((modelview, n))
 
