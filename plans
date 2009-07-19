@@ -1,1 +1,4 @@
-increase resolution by swithing cam libraries
+1. increase resolution by swithing cam libraries
+2. fix bug w/ finding outer boundary of marker instead of inner
+3. finish implementing orientation code
+4. cleanup
