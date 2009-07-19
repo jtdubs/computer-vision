@@ -12,7 +12,7 @@ def main():
     gray            = cvCreateImage(size, 8, 1)
     edges           = cvCreateImage(size, 8, 1)
 
-    t1, t2, ap = 255, 1, 3
+    t1, t2, ap = 805, 415, 5
 
     cvNamedWindow('frame', 1)
     cvNamedWindow('edges', 1)
