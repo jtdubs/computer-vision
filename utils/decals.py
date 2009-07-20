@@ -60,9 +60,12 @@ class DecalIdentifier:
             corners = [CvPoint2D32f(p.x, p.y) for p in decal.asarray(CvPoint)]
             corners = cvFindCornerSubPix(self.gray, corners, CvSize(5, 5), CvSize(-1, -1), cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 100, 0.001))
 
+            # identify decal value and orientation
             decal_value, decal_orientation = self._identify_decal(i, corners, decal)
 
-            # ps = ps[orient:] + ps[:orient] # apply orientation
+            # apply orientation to corners so we get the correct rotation matrix
+            corners = corners[4-decal_orientation:] + corners[:4-decal_orientation]
+
             for j, corner in enumerate(corners):
                 self.image_mat[j,0], self.image_mat[j,1] = corner.x, corner.y
 
@@ -152,7 +155,6 @@ class DecalIdentifier:
             hole = contour.flags & CV_SEQ_FLAG_HOLE
             if hole and (contour.rect.width*contour.rect.height) > 200:
                 poly = cvApproxPoly(contour, sizeof(CvContour), None, CV_POLY_APPROX_DP, max(contour.rect.width,contour.rect.height)/8)
-                # if cvCheckContourConvexity(poly):
                 if self.debug:
                     cvDrawContours(self.image, poly, CV_RGB(255,0,0), CV_RGB(255,0,0), 0, 1, 8)
                 yield poly
