@@ -47,6 +47,8 @@ def main():
         cvCmpS(r, 200, mask2, CV_CMP_GT)
         cvAnd(mask, mask2, mask)
 
+        cvDilate(mask, mask, None, 1)
+
         cvAddWeighted(mask, 1.0, laser, 0.95, 0.0, laser)
         cvShowImage('laser', laser)
 
