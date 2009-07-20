@@ -18,28 +18,19 @@ def main():
     min     = cvCreateImage(size, 8, 1)
     diff    = cvCreateImage(size, 8, 1)
 
-    cvNamedWindow('frame', 1)
     cvNamedWindow('laser', 1)
-    # cvNamedWindow('g',     1)
-    # cvNamedWindow('b',     1)
 
     while True:
         frame = cvQueryFrame(capture)
         cvFlip(frame, copy, 1)
         cvSplit(copy, b, g, r)
 
-        # assert max(r,g,b) - min(r,g,b) > 50
-        cvMax(r, g, max); cvMax(max, b, max)
-        cvMin(r, g, min); cvMin(max, b, min)
-        cvSub(max, min, diff)
-        cvCmpS(diff, 50, mask, CV_CMP_GT)
-
-        # assert |r-g| > 30
+        # assert |r-g| > 50
         cvAbsDiff(r, g, diff)
-        cvCmpS(diff, 50, mask2, CV_CMP_GT)
-        cvAnd(mask, mask2, mask)
+        cvCmpS(diff, 50, mask, CV_CMP_GT)
+        # cvAnd(mask, mask2, mask)
 
-        # assert |r-b| > 30
+        # assert |r-b| > 50
         cvAbsDiff(r, b, diff)
         cvCmpS(diff, 50, mask2, CV_CMP_GT)
         cvAnd(mask, mask2, mask)
@@ -56,10 +47,6 @@ def main():
         cvCmpS(r, 200, mask2, CV_CMP_GT)
         cvAnd(mask, mask2, mask)
 
-        cvShowImage('frame', copy)
-
-        # cvSetZero(laser)
-        # cvCopy(copy, laser, mask)
         cvAddWeighted(mask, 1.0, laser, 0.95, 0.0, laser)
         cvShowImage('laser', laser)
 
