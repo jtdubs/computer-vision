@@ -114,15 +114,39 @@ class DecalIdentifier:
             cvSetImageROI(self.image, cvRect(offset*50+25, 0+25, 25, 25)); cvSet(self.image, c[2])
             cvSetImageROI(self.image, cvRect(offset*50,    0+25, 25, 25)); cvSet(self.image, c[3])
 
+        # stretch color range between perceived black and perceived white
+        cvSetImageROI(self.rectified, cvRect(0, 0, 100, 25))
+        white = cvAvg(self.rectified)
+        black = [c[0].val[i] for i in range(0, 3)]
+        diff  = [white.val[j] - black[j] for j in range(0, 3)]
+
+        for i in range(0, 4):
+            for j in range(0, 3):
+                c[i].val[j] = max(0, min(255, (c[i].val[j] - black[j]) * 255 / diff[j]))
+
+        if self.debug:
+            # render quadrants to self.image for debugging purposes
+            cvSetImageROI(self.image, cvRect(offset*50,    50,    25, 25)); cvSet(self.image, c[0])
+            cvSetImageROI(self.image, cvRect(offset*50+25, 50,    25, 25)); cvSet(self.image, c[1])
+            cvSetImageROI(self.image, cvRect(offset*50+25, 50+25, 25, 25)); cvSet(self.image, c[2])
+            cvSetImageROI(self.image, cvRect(offset*50,    50+25, 25, 25)); cvSet(self.image, c[3])
+            cvSetImageROI(self.image, cvRect(offset*50+50, 50,    25, 25)); cvSet(self.image, CV_RGB(black[0], black[1], black[2]))
+            cvSetImageROI(self.image, cvRect(offset*50+50, 50+25, 25, 25)); cvSet(self.image, CV_RGB(white.val[0], white.val[1], white.val[2]))
+
         # determine color of quadrants, and therefore decal value
         decal_value = 0
         for i in range(1, 4):
             channels    = [c[i].val[j] for j in range(0, 3)]
-            mx          = max(channels)
-            mn          = min(channels)
-            max_channel = channels.index(mx)
-            spread      = (mx - mn) / float(mx)
-            value       = (max_channel+1) if spread >= 0.2 else 0
+            sorted      = list(channels)
+            sorted.sort()
+            max_channel = channels.index(sorted[2])
+            # hand-tuned color thresholds based on experimentation in my living rooms lighting conditions... :-)
+            if max_channel == 0:   # blue
+                value = (max_channel+1) if (sorted[2] / float(max(1, sorted[1]))) >= 1.2 and (sorted[2] - sorted[1]) >= 20 else 0
+            elif max_channel == 1: # green
+                value = (max_channel+1) if (sorted[2] / float(max(1, sorted[1]))) >= 1.5 and (sorted[2] - sorted[1]) >= 30 else 0
+            elif max_channel == 2: # red:
+                value = (max_channel+1) if (sorted[2] / float(max(1, sorted[1]))) >= 2.0 and (sorted[2] - sorted[1]) >= 40 else 0
             decal_value = (decal_value * 4) + value
 
             c[i].val[(max_channel+0)%3] = 0 if value == 0 else 255
@@ -131,10 +155,10 @@ class DecalIdentifier:
 
         if self.debug:
             # render quadrants to self.image for debugging purposes
-            cvSetImageROI(self.image, cvRect(offset*50,    50,    25, 25)); cvSet(self.image, CV_RGB(0,0,0))
-            cvSetImageROI(self.image, cvRect(offset*50+25, 50,    25, 25)); cvSet(self.image, c[1])
-            cvSetImageROI(self.image, cvRect(offset*50+25, 50+25, 25, 25)); cvSet(self.image, c[2])
-            cvSetImageROI(self.image, cvRect(offset*50,    50+25, 25, 25)); cvSet(self.image, c[3])
+            cvSetImageROI(self.image, cvRect(offset*50,    100,    25, 25)); cvSet(self.image, CV_RGB(0,0,0))
+            cvSetImageROI(self.image, cvRect(offset*50+25, 100,    25, 25)); cvSet(self.image, c[1])
+            cvSetImageROI(self.image, cvRect(offset*50+25, 100+25, 25, 25)); cvSet(self.image, c[2])
+            cvSetImageROI(self.image, cvRect(offset*50,    100+25, 25, 25)); cvSet(self.image, c[3])
 
         cvResetImageROI(self.image)
         cvResetImageROI(self.rectified)
