@@ -7,6 +7,7 @@ from opencv      import *
 from math        import *
 from random      import *
 from ctypes      import *
+import time
 import sys
 
 from models.laptop import draw_body, draw_lid
@@ -112,11 +113,12 @@ class AugmentedReality:
             glTranslatef(0.5, 0.5, 0.0)
 
             if value == 0:   # [W,W,W]
+                lid_angle = -abs(110 - ((time.time() * 100) % 220))
                 glColor3f(0.1, 0.1, 0.1)
                 glScalef(0.2, 0.2, 0.2)
                 glTranslatef(0.0, 4.25, 0.0)
                 glCallList(self.base)
-                glRotatef(-30, 1, 0, 0)
+                glRotatef(lid_angle, 1, 0, 0)
                 glCallList(self.lid)
             elif value == 4: # [W,B,W]
                 glColor3f(0.1, 1.0, 0.1)
