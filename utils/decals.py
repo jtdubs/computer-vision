@@ -115,10 +115,13 @@ class DecalIdentifier:
             cvSetImageROI(self.image, cvRect(offset*50,    0+25, 25, 25)); cvSet(self.image, c[3])
 
         # stretch color range between perceived black and perceived white
-        cvSetImageROI(self.rectified, cvRect(0, 0, 100, 25))
-        white = cvAvg(self.rectified)
+        cvSetImageROI(self.rectified, cvRect(0,   0, 100, 25)); white1 = cvAvg(self.rectified)
+        cvSetImageROI(self.rectified, cvRect(0,  75, 100, 25)); white2 = cvAvg(self.rectified)
+        cvSetImageROI(self.rectified, cvRect(0,  25,  25, 75)); white3 = cvAvg(self.rectified)
+        cvSetImageROI(self.rectified, cvRect(75, 25, 100, 75)); white4 = cvAvg(self.rectified)
+        white = [(white1.val[i]*4 + white2.val[i]*4 + white3.val[i]*2 + white4.val[i]*2) / 12 for i in range(0, 3)]
         black = [c[0].val[i] for i in range(0, 3)]
-        diff  = [white.val[j] - black[j] for j in range(0, 3)]
+        diff  = [white[j] - black[j] for j in range(0, 3)]
 
         for i in range(0, 4):
             for j in range(0, 3):
@@ -131,7 +134,7 @@ class DecalIdentifier:
             cvSetImageROI(self.image, cvRect(offset*50+25, 50+25, 25, 25)); cvSet(self.image, c[2])
             cvSetImageROI(self.image, cvRect(offset*50,    50+25, 25, 25)); cvSet(self.image, c[3])
             cvSetImageROI(self.image, cvRect(offset*50+50, 50,    25, 25)); cvSet(self.image, CV_RGB(black[0], black[1], black[2]))
-            cvSetImageROI(self.image, cvRect(offset*50+50, 50+25, 25, 25)); cvSet(self.image, CV_RGB(white.val[0], white.val[1], white.val[2]))
+            cvSetImageROI(self.image, cvRect(offset*50+50, 50+25, 25, 25)); cvSet(self.image, CV_RGB(white[0], white[1], white[2]))
 
         # determine color of quadrants, and therefore decal value
         decal_value = 0
