@@ -9,12 +9,15 @@ from random      import *
 from ctypes      import *
 import sys
 
+from models.laptop import draw_body, draw_lid
+
 from utils.decals import DecalIdentifier
 
 class AugmentedReality:
     def __init__(self):
         self.init_glut()
         self.init_cv()
+        self.init_models()
         self.decals = []
 
     def init_glut(self):
@@ -54,6 +57,17 @@ class AugmentedReality:
         size            = cvSize(self.frame.width, self.frame.height)
         self.copy       = cvCreateImage(size, 8, 3)
         self.identifier = DecalIdentifier()
+
+    def init_models(self):
+        self.base, self.lid = glGenLists(1), glGenLists(1)
+
+        glNewList(self.base, GL_COMPILE)
+        draw_body()
+        glEndList()
+
+        glNewList(self.lid, GL_COMPILE)
+        draw_lid()
+        glEndList()
 
     def on_reshape(self, w, h):
         w, h = 640, 480
@@ -98,8 +112,12 @@ class AugmentedReality:
             glTranslatef(0.5, 0.5, 0.0)
 
             if value == 0:   # [W,W,W]
-                glColor3f(1.0, 0.1, 0.1)
-                glutSolidCone(0.5, 1.0, 100, 20)
+                glColor3f(0.1, 0.1, 0.1)
+                glScalef(0.2, 0.2, 0.2)
+                glTranslatef(0.0, 4.25, 0.0)
+                glCallList(self.base)
+                glRotatef(-30, 1, 0, 0)
+                glCallList(self.lid)
             elif value == 4: # [W,B,W]
                 glColor3f(0.1, 1.0, 0.1)
                 glTranslatef(0.0, 0.0, 0.5)
