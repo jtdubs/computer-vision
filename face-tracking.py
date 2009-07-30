@@ -43,7 +43,7 @@ class FaceTracking:
         self.scene = glGenLists(1)
 
     def init_cv(self):
-        self.cascade  = cvLoadHaarClassifierCascade('/usr/share/opencv/haarcascades/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
+        self.cascade  = cvLoadHaarClassifierCascade('res/haarcascade_frontalface_alt2.xml', cvSize(1, 1))
         self.storage  = cvCreateMemStorage(0)
         self.capture  = cvCaptureFromCAM(0)
         self.frame    = cvQueryFrame(self.capture)
